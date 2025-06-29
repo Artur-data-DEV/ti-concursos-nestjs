@@ -1,0 +1,423 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Modelos de Autenticação (NextAuth.js)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Modelo de Usuário
+model User {
+  id            String      @id @default(cuid())
+  name          String?
+  email         String      @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole    @default(STUDENT)
+  bio           String?
+  socialLinks   Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  secure        UserSecure?
+
+  accounts          Account[]
+  sessions          Session[]
+  questions         Question[]
+  answers           Answer[]
+  enrollments       Enrollment[]
+  progress          UserProgress[]
+  notifications     Notification[]
+  reviews           CourseReview[]
+  favoriteQuestions FavoriteQuestion[]
+  topicPerformance  UserTopicPerformance[]
+  Course            Course[]
+
+  @@map("users")
+}
+
+model UserSecure {
+  userId   String @id
+  password String @db.VarChar()
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_secure")
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subtopics        Subtopic[]
+  questions        Question[]
+  topicPerformance UserTopicPerformance[]
+
+  @@map("topics")
+}
+
+model Subtopic {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  topicId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  topic     Topic      @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questions Question[]
+
+  @@map("subtopics")
+}
+
+model Technology {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  category    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  questions QuestionTechnology[]
+
+  @@map("technologies")
+}
+
+model Banca {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  fullName        String
+  website         String?
+  characteristics Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  questions Question[]
+
+  @@map("bancas")
+}
+
+model Question {
+  id             String       @id @default(cuid())
+  text           String       @db.Text
+  questionType   QuestionType
+  difficulty     Difficulty
+  topicId        String
+  subtopicId     String?
+  bancaId        String?
+  sourceConcurso String?
+  sourceCargo    String?
+  sourceYear     Int?
+  sourceUrl      String?
+  authorId       String?
+  explanation    String?      @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  topic        Topic                @relation(fields: [topicId], references: [id])
+  subtopic     Subtopic?            @relation(fields: [subtopicId], references: [id])
+  banca        Banca?               @relation(fields: [bancaId], references: [id])
+  author       User?                @relation(fields: [authorId], references: [id])
+  options      Option[]
+  technologies QuestionTechnology[]
+  answers      Answer[]
+  statistics   QuestionStatistics?
+  tags         QuestionTag[]
+  favoriteBy   FavoriteQuestion[]
+
+  @@map("questions")
+}
+
+enum QuestionType {
+  MULTIPLA_ESCOLHA
+  CERTO_ERRADO
+  DISCURSIVA
+  CODIGO
+}
+
+enum Difficulty {
+  FACIL
+  MEDIO
+  DIFICIL
+}
+
+model Option {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String  @db.Text
+  isCorrect  Boolean @default(false)
+  order      Int
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("options")
+}
+
+model QuestionTechnology {
+  questionId   String
+  technologyId String
+
+  question   Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  technology Technology @relation(fields: [technologyId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, technologyId])
+  @@map("question_technologies")
+}
+
+model QuestionStatistics {
+  id                 String   @id @default(cuid())
+  questionId         String   @unique
+  totalAnswers       Int      @default(0)
+  correctAnswers     Int      @default(0)
+  averageTimeSeconds Float?
+  difficultyRating   Float?
+  lastUpdated        DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_statistics")
+}
+
+model Answer {
+  id               String   @id @default(cuid())
+  userId           String
+  questionId       String
+  selectedOption   String?
+  textAnswer       String?  @db.Text
+  isCorrect        Boolean?
+  timeSpentSeconds Int?
+  answeredAt       DateTime @default(now())
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  attempts AnswerAttempt[]
+
+  @@map("answers")
+}
+
+model AnswerAttempt {
+  id        String   @id @default(cuid())
+  answerId  String
+  attemptAt DateTime @default(now())
+  isCorrect Boolean
+  timeSpent Int?
+
+  answer Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@map("answer_attempts")
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  questions QuestionTag[]
+}
+
+model QuestionTag {
+  questionId String
+  tagId      String
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  tag      Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([questionId, tagId])
+}
+
+model FavoriteQuestion {
+  userId     String
+  questionId String
+  markedAt   DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, questionId])
+}
+
+model UserTopicPerformance {
+  id         String   @id @default(cuid())
+  userId     String
+  topicId    String
+  accuracy   Float
+  lastUpdate DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+}
+
+model Course {
+  id           String   @id @default(cuid())
+  instructorId String
+  title        String
+  description  String   @db.Text
+  thumbnail    String?
+  price        Float?
+  isPublished  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  instructor   User     @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+
+  modules     Module[]
+  enrollments Enrollment[]
+  reviews     CourseReview[]
+
+  @@map("courses")
+}
+
+model CourseReview {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  courseId    String
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course   Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+  progress UserProgress[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id         String     @id @default(cuid())
+  title      String
+  content    String     @db.Text
+  lessonType LessonType
+  videoUrl   String?
+  duration   Int?
+  moduleId   String
+  order      Int
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  module   Module         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress UserProgress[]
+
+  @@map("lessons")
+}
+
+enum LessonType {
+  VIDEO
+  TEXT
+  QUIZ
+  EXERCISE
+}
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  userId      String
+  courseId    String
+  enrolledAt  DateTime         @default(now())
+  completedAt DateTime?
+  status      EnrollmentStatus @default(ACTIVE)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+model UserProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  moduleId    String?
+  lessonId    String?
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module? @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@unique([userId, lessonId])
+  @@map("user_progress")
+}
