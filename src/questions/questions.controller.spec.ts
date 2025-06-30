@@ -3,7 +3,11 @@ import { QuestionsController } from './questions.controller';
 import { QuestionsService } from './questions.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard/roles.guard';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 
 describe('QuestionsController', () => {
@@ -110,7 +114,10 @@ describe('QuestionsController', () => {
       const result = await controller.findAll(req, questionId);
 
       expect(result).toEqual(mockQuestion);
-      expect(mockQuestionsService.findOne).toHaveBeenCalledWith(questionId, true);
+      expect(mockQuestionsService.findOne).toHaveBeenCalledWith(
+        questionId,
+        true,
+      );
     });
 
     it('should throw ForbiddenException for unauthenticated user', async () => {
@@ -126,7 +133,9 @@ describe('QuestionsController', () => {
         user: { sub: mockStudentId, role: 'STUDENT' },
       };
 
-      await expect(controller.findAll(req, 'invalid-id')).rejects.toThrow(BadRequestException);
+      await expect(controller.findAll(req, 'invalid-id')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException when question not found', async () => {
@@ -137,7 +146,9 @@ describe('QuestionsController', () => {
         user: { sub: mockStudentId, role: 'STUDENT' },
       };
 
-      await expect(controller.findAll(req, questionId)).rejects.toThrow(NotFoundException);
+      await expect(controller.findAll(req, questionId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should apply filters when provided', async () => {
@@ -205,7 +216,10 @@ describe('QuestionsController', () => {
       const result = await controller.create(createQuestionDto, req);
 
       expect(result).toEqual(createdQuestion);
-      expect(mockQuestionsService.create).toHaveBeenCalledWith(createQuestionDto, mockProfessorId);
+      expect(mockQuestionsService.create).toHaveBeenCalledWith(
+        createQuestionDto,
+        mockProfessorId,
+      );
     });
 
     it('should create question for ADMIN', async () => {
@@ -230,7 +244,10 @@ describe('QuestionsController', () => {
       const result = await controller.create(createQuestionDto, req);
 
       expect(result).toEqual(createdQuestion);
-      expect(mockQuestionsService.create).toHaveBeenCalledWith(createQuestionDto, mockAdminId);
+      expect(mockQuestionsService.create).toHaveBeenCalledWith(
+        createQuestionDto,
+        mockAdminId,
+      );
     });
 
     it('should throw BadRequestException for invalid data', async () => {
@@ -244,7 +261,9 @@ describe('QuestionsController', () => {
         user: { sub: mockProfessorId, role: 'PROFESSOR' },
       };
 
-      await expect(controller.create(invalidDto, req)).rejects.toThrow(BadRequestException);
+      await expect(controller.create(invalidDto, req)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -273,10 +292,13 @@ describe('QuestionsController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      const result = await controller.update(questionId, updateDto, req);
+      const result: any = await controller.update(questionId, updateDto, req);
 
       expect(result).toEqual(updatedQuestion);
-      expect(mockQuestionsService.update).toHaveBeenCalledWith(questionId, { ...updateDto, id: questionId });
+      expect(mockQuestionsService.update).toHaveBeenCalledWith(questionId, {
+        ...updateDto,
+        id: questionId,
+      });
     });
 
     it('should update question for question author (PROFESSOR)', async () => {
@@ -313,10 +335,12 @@ describe('QuestionsController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.update(questionId, invalidDto, req)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(questionId, invalidDto, req),
+      ).rejects.toThrow(BadRequestException);
     });
 
-      it("should throw BadRequestException for PROFESSOR updating other author question", async () => {
+    it('should throw BadRequestException for PROFESSOR updating other author question', async () => {
       const updateDto = {
         text: 'Updated Question',
       };
@@ -332,10 +356,12 @@ describe('QuestionsController', () => {
         user: { sub: mockProfessorId, role: 'PROFESSOR' },
       };
 
-      await expect(controller.update(questionId, updateDto, req)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(questionId, updateDto, req),
+      ).rejects.toThrow(BadRequestException);
     });
 
-      it("should throw BadRequestException when question not found", async () => {
+    it('should throw BadRequestException when question not found', async () => {
       const updateDto = {
         text: 'Updated Question',
       };
@@ -346,7 +372,9 @@ describe('QuestionsController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.update(questionId, updateDto, req)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(questionId, updateDto, req),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -392,7 +420,7 @@ describe('QuestionsController', () => {
       expect(result).toEqual({ message: 'Question deleted' });
     });
 
-        it("should throw BadRequestException for PROFESSOR deleting other author question", async () => {
+    it('should throw BadRequestException for PROFESSOR deleting other author question', async () => {
       const existingQuestion = {
         id: questionId,
         authorId: randomUUID(), // different author
@@ -404,15 +432,20 @@ describe('QuestionsController', () => {
         user: { sub: mockProfessorId, role: 'PROFESSOR' },
       };
 
-      await expect(controller.remove(questionId, req)).rejects.toThrow(ForbiddenException);
-    });    it('should throw NotFoundException when question not found', async () => {
+      await expect(controller.remove(questionId, req)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+    it('should throw NotFoundException when question not found', async () => {
       mockQuestionsService.findOne.mockResolvedValue(null);
 
       const req = {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.remove(questionId, req)).rejects.toThrow(NotFoundException);
+      await expect(controller.remove(questionId, req)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
@@ -420,9 +453,9 @@ describe('QuestionsController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.remove('invalid-id', req)).rejects.toThrow(BadRequestException);
+      await expect(controller.remove('invalid-id', req)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });
-
-

@@ -157,9 +157,7 @@ export class UsersController {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'
       ) {
-        throw new NotFoundException(
-          'Usuário não encontrado para atualização.',
-        );
+        throw new NotFoundException('Usuário não encontrado para atualização.');
       }
       throw error;
     }
@@ -195,12 +193,9 @@ export class UsersController {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2025'
       ) {
-        throw new NotFoundException(
-          'Usuário não encontrado para exclusão.',
-        );
+        throw new NotFoundException('Usuário não encontrado para exclusão.');
       }
       throw error;
     }
   }
 }
-

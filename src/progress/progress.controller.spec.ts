@@ -21,5 +21,3 @@ describe('ProgressController', () => {
     expect(controller).toBeDefined();
   });
 });
-
-

@@ -3,7 +3,11 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard/roles.guard';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 
 describe('UsersController', () => {
@@ -77,7 +81,11 @@ describe('UsersController', () => {
     });
 
     it('should return user by ID for ADMIN', async () => {
-      const mockUser = { id: mockStudentId, name: 'Student User', role: 'STUDENT' };
+      const mockUser = {
+        id: mockStudentId,
+        name: 'Student User',
+        role: 'STUDENT',
+      };
 
       mockUsersService.findOne.mockResolvedValue(mockUser);
 
@@ -92,7 +100,11 @@ describe('UsersController', () => {
     });
 
     it('should return own profile for STUDENT', async () => {
-      const mockUser = { id: mockStudentId, name: 'Student User', role: 'STUDENT' };
+      const mockUser = {
+        id: mockStudentId,
+        name: 'Student User',
+        role: 'STUDENT',
+      };
 
       mockUsersService.findOne.mockResolvedValue(mockUser);
 
@@ -111,7 +123,9 @@ describe('UsersController', () => {
         user: { sub: mockStudentId, role: 'STUDENT' },
       };
 
-      await expect(controller.findAll(req, mockAdminId)).rejects.toThrow(ForbiddenException);
+      await expect(controller.findAll(req, mockAdminId)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw ForbiddenException for non-ADMIN listing all users', async () => {
@@ -127,7 +141,9 @@ describe('UsersController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.findAll(req, 'invalid-id')).rejects.toThrow(BadRequestException);
+      await expect(controller.findAll(req, 'invalid-id')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
@@ -137,7 +153,9 @@ describe('UsersController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.findAll(req, mockStudentId)).rejects.toThrow(NotFoundException);
+      await expect(controller.findAll(req, mockStudentId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -169,7 +187,9 @@ describe('UsersController', () => {
         role: 'INVALID_ROLE',
       };
 
-      await expect(controller.create(invalidDto)).rejects.toThrow(BadRequestException);
+      await expect(controller.create(invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -190,7 +210,10 @@ describe('UsersController', () => {
       const result = await controller.update(mockStudentId, updateDto, req);
 
       expect(result).toEqual(updatedUser);
-      expect(mockUsersService.update).toHaveBeenCalledWith(mockStudentId, updateDto);
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        mockStudentId,
+        updateDto,
+      );
     });
 
     it('should update own profile for STUDENT', async () => {
@@ -206,7 +229,10 @@ describe('UsersController', () => {
       const result = await controller.update(mockStudentId, updateDto, req);
 
       expect(result).toEqual(updatedUser);
-      expect(mockUsersService.update).toHaveBeenCalledWith(mockStudentId, updateDto);
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        mockStudentId,
+        updateDto,
+      );
     });
 
     it('should throw ForbiddenException for STUDENT updating other user', async () => {
@@ -216,7 +242,9 @@ describe('UsersController', () => {
         user: { sub: mockStudentId, role: 'STUDENT' },
       };
 
-      await expect(controller.update(mockAdminId, updateDto, req)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.update(mockAdminId, updateDto, req),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
@@ -226,7 +254,9 @@ describe('UsersController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.update('invalid-id', updateDto, req)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update('invalid-id', updateDto, req),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException for invalid data', async () => {
@@ -236,7 +266,9 @@ describe('UsersController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.update(mockStudentId, invalidDto, req)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(mockStudentId, invalidDto, req),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -275,7 +307,9 @@ describe('UsersController', () => {
         user: { sub: mockStudentId, role: 'STUDENT' },
       };
 
-      await expect(controller.remove(mockAdminId, req)).rejects.toThrow(ForbiddenException);
+      await expect(controller.remove(mockAdminId, req)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
@@ -283,8 +317,9 @@ describe('UsersController', () => {
         user: { sub: mockAdminId, role: 'ADMIN' },
       };
 
-      await expect(controller.remove('invalid-id', req)).rejects.toThrow(BadRequestException);
+      await expect(controller.remove('invalid-id', req)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });
-

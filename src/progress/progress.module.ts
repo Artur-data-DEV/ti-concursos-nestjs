@@ -6,6 +6,6 @@ import { PrismaModule } from '../prisma/prisma.module';
 @Module({
   imports: [PrismaModule],
   controllers: [ProgressController],
-  providers: [ProgressService]
+  providers: [ProgressService],
 })
 export class ProgressModule {}

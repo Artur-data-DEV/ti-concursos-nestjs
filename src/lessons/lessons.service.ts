@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import { Prisma } from "@prisma/client";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class LessonsService {
@@ -26,5 +26,3 @@ export class LessonsService {
     return this.prisma.lesson.delete({ where: { id } });
   }
 }
-
-

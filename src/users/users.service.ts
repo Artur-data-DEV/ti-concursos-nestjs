@@ -30,7 +30,10 @@ export class UsersService {
   }
 
   async findOneByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email }, include: { secure: true } });
+    return this.prisma.user.findUnique({
+      where: { email },
+      include: { secure: true },
+    });
   }
 
   async update(id: string, data: any) {
@@ -54,4 +57,3 @@ export class UsersService {
     return this.prisma.user.delete({ where: { id } });
   }
 }
-

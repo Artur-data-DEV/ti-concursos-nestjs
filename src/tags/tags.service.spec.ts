@@ -1,8 +1,8 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { TagsService } from "./tags.service";
-import { PrismaService } from "../prisma/prisma.service";
+import { Test, TestingModule } from '@nestjs/testing';
+import { TagsService } from './tags.service';
+import { PrismaService } from '../prisma/prisma.service';
 
-describe("TagsService", () => {
+describe('TagsService', () => {
   let service: TagsService;
   let prismaService: PrismaService;
 
@@ -15,9 +15,7 @@ describe("TagsService", () => {
     prismaService = module.get<PrismaService>(PrismaService);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(service).toBeDefined();
   });
 });
-
-

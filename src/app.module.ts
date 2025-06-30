@@ -20,7 +20,25 @@ import { TechnologiesModule } from './technologies/technologies.module';
 import { TopicsModule } from './topics/topics.module';
 
 @Module({
-  imports: [PrismaModule, UsersModule, AuthModule, QuestionsModule, AnswersModule, AnswerAttemptsModule, CoursesModule, EnrollmentsModule, FavoriteQuestionsModule, LessonsModule, ModulesModule, NotificationsModule, ProgressModule, ReviewsModule, TagsModule, TechnologiesModule, TopicsModule],
+  imports: [
+    PrismaModule,
+    UsersModule,
+    AuthModule,
+    QuestionsModule,
+    AnswersModule,
+    AnswerAttemptsModule,
+    CoursesModule,
+    EnrollmentsModule,
+    FavoriteQuestionsModule,
+    LessonsModule,
+    ModulesModule,
+    NotificationsModule,
+    ProgressModule,
+    ReviewsModule,
+    TagsModule,
+    TechnologiesModule,
+    TopicsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

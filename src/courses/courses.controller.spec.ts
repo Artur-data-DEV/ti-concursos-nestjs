@@ -21,5 +21,3 @@ describe('CoursesController', () => {
     expect(controller).toBeDefined();
   });
 });
-
-

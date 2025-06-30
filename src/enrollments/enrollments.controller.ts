@@ -8,15 +8,15 @@ import {
   Delete,
   UseGuards,
   Request,
-} from "@nestjs/common";
-import { EnrollmentsService } from "./enrollments.service";
-import { Prisma } from "@prisma/client";
-import { JwtAuthGuard } from "../auth/jwt-auth.guard/jwt-auth.guard";
-import { RolesGuard } from "../auth/roles.guard/roles.guard";
-import { Roles } from "../auth/roles.decorator/roles.decorator";
-import { UserRole } from "@prisma/client";
+} from '@nestjs/common';
+import { EnrollmentsService } from './enrollments.service';
+import { Prisma } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard/roles.guard';
+import { Roles } from '../auth/roles.decorator/roles.decorator';
+import { UserRole } from '@prisma/client';
 
-@Controller("enrollments")
+@Controller('enrollments')
 export class EnrollmentsController {
   constructor(private readonly enrollmentsService: EnrollmentsService) {}
 
@@ -42,16 +42,16 @@ export class EnrollmentsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STUDENT)
-  @Get(":id")
-  findOne(@Param("id") id: string) {
+  @Get(':id')
+  findOne(@Param('id') id: string) {
     return this.enrollmentsService.findOne(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @Patch(":id")
+  @Patch(':id')
   update(
-    @Param("id") id: string,
+    @Param('id') id: string,
     @Body() updateEnrollmentDto: Prisma.EnrollmentUpdateInput,
   ) {
     return this.enrollmentsService.update(id, updateEnrollmentDto);
@@ -59,10 +59,8 @@ export class EnrollmentsController {
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @Delete(":id")
-  remove(@Param("id") id: string) {
+  @Delete(':id')
+  remove(@Param('id') id: string) {
     return this.enrollmentsService.remove(id);
   }
 }
-
-

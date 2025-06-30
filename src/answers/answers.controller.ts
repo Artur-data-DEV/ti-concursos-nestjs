@@ -7,17 +7,19 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
-import { AnswersService } from './answers.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
-import { z, ZodError } from 'zod';
+import { AnswersService } from './answers.service';
+import { ZodError, z } from 'zod';
+import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
+import { CreateAnswerDto } from './answers.dto';
 
-const answerSchema = z.object({
-  userId: z.string(),
-  questionId: z.string(),
+const createAnswerSchema = z.object({
+  userId: z.string().uuid(),
+  questionId: z.string().uuid(),
   selectedOption: z.string().optional(),
   textAnswer: z.string().nullable().optional(),
   isCorrect: z.boolean().optional(),
-  timeSpentSeconds: z.number().optional(),
+  timeSpentSeconds: z.number().int().min(0).optional(),
 });
 
 @Controller('answers')
@@ -33,14 +35,17 @@ export class AnswersController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Body() createAnswerDto: any, @Request() req: any) {
-    const token = req.user;
+  async create(
+    @Body() body: CreateAnswerDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const user = req.user;
 
-    if (!token) {
+    if (!user) {
       throw new ForbiddenException('Não autenticado.');
     }
 
-    const result = answerSchema.safeParse(createAnswerDto);
+    const result = createAnswerSchema.safeParse(body);
 
     if (!result.success) {
       throw new BadRequestException({
@@ -49,12 +54,17 @@ export class AnswersController {
       });
     }
 
-    // Um usuário só pode criar uma resposta para si mesmo, a menos que seja ADMIN
-    if (token.role !== 'ADMIN' && token.sub !== result.data.userId) {
-      throw new ForbiddenException('Não autorizado.');
+    const data = result.data;
+
+    const isAdmin = user.role === 'ADMIN';
+
+    // Apenas ADMIN pode responder por outro userId
+    if (!isAdmin && user.sub !== data.userId) {
+      throw new ForbiddenException(
+        'Você só pode criar respostas para sua própria conta.',
+      );
     }
 
-    return this.answersService.create(result.data);
+    return this.answersService.create(data);
   }
 }
-

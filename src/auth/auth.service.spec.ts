@@ -1,13 +1,13 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { AuthService } from "./auth.service";
-import { UsersService } from "../users/users.service";
-import { JwtService } from "@nestjs/jwt";
-import { PrismaService } from "../prisma/prisma.service";
-import * as bcrypt from "bcryptjs";
+import { Test, TestingModule } from '@nestjs/testing';
+import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service';
+import { JwtService } from '@nestjs/jwt';
+import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcryptjs';
 
-jest.mock("bcryptjs");
+jest.mock('bcryptjs');
 
-describe("AuthService", () => {
+describe('AuthService', () => {
   let service: AuthService;
   let usersService: UsersService;
   let jwtService: JwtService;
@@ -37,71 +37,68 @@ describe("AuthService", () => {
     jwtService = module.get<JwtService>(JwtService);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe("validateUser", () => {
-    it("should return user if password matches", async () => {
+  describe('validateUser', () => {
+    it('should return user if password matches', async () => {
       const user = {
-        id: "1",
-        email: "test@example.com",
-        name: "Test User",
-        secure: { password: "hashedPassword" },
+        id: '1',
+        email: 'test@example.com',
+        name: 'Test User',
+        secure: { password: 'hashedPassword' },
       };
       (usersService.findOneByEmail as jest.Mock).mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
-      const result = await service.validateUser(
-        "test@example.com",
-        "password"
-      );
-      expect(result).toEqual({ id: user.id, email: user.email, name: user.name });
+      const result = await service.validateUser('test@example.com', 'password');
+      expect(result).toEqual({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      });
     });
 
-    it("should return null if password does not match", async () => {
+    it('should return null if password does not match', async () => {
       const user = {
-        id: "1",
-        email: "test@example.com",
-        name: "Test User",
-        secure: { password: "hashedPassword" },
+        id: '1',
+        email: 'test@example.com',
+        name: 'Test User',
+        secure: { password: 'hashedPassword' },
       };
       (usersService.findOneByEmail as jest.Mock).mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-      const result = await service.validateUser(
-        "test@example.com",
-        "password"
-      );
+      const result = await service.validateUser('test@example.com', 'password');
       expect(result).toBeNull();
     });
 
-    it("should return null if user not found", async () => {
+    it('should return null if user not found', async () => {
       (usersService.findOneByEmail as jest.Mock).mockResolvedValue(null);
 
-      const result = await service.validateUser(
-        "test@example.com",
-        "password"
-      );
+      const result = await service.validateUser('test@example.com', 'password');
       expect(result).toBeNull();
     });
   });
 
-  describe("login", () => {
-    it("should return access_token", async () => {
+  describe('login', () => {
+    it('should return access_token', async () => {
       const user = {
-        id: "1",
-        email: "test@example.com",
-        name: "Test User",
-        role: "STUDENT",
+        id: '1',
+        email: 'test@example.com',
+        name: 'Test User',
+        role: 'STUDENT',
       };
-      (jwtService.sign as jest.Mock).mockReturnValue("mockAccessToken");
+      (jwtService.sign as jest.Mock).mockReturnValue('mockAccessToken');
 
       const result = await service.login(user);
-      expect(result).toEqual({ access_token: "mockAccessToken" });
-      expect(jwtService.sign).toHaveBeenCalledWith({ email: user.email, sub: user.id, role: user.role });
+      expect(result).toEqual({ access_token: 'mockAccessToken' });
+      expect(jwtService.sign).toHaveBeenCalledWith({
+        email: user.email,
+        sub: user.id,
+        role: user.role,
+      });
     });
   });
 });
-
-

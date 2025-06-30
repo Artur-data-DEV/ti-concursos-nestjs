@@ -7,12 +7,16 @@ import * as bcrypt from 'bcryptjs';
 export class AuthService {
   constructor(
     private usersService: UsersService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findOneByEmail(email);
-    if (user && user.secure && (await bcrypt.compare(pass, user.secure.password))) {
+    if (
+      user &&
+      user.secure &&
+      (await bcrypt.compare(pass, user.secure.password))
+    ) {
       const { secure, ...result } = user;
       return result;
     }
@@ -26,5 +30,3 @@ export class AuthService {
     };
   }
 }
-
-

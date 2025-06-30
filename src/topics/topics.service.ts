@@ -43,4 +43,3 @@ export class TopicsService {
     return this.prisma.topic.delete({ where: { id } });
   }
 }
-

@@ -215,4 +215,3 @@ export class QuestionsController {
     return { message: 'Question deleted' };
   }
 }
-

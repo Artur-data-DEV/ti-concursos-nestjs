@@ -12,12 +12,7 @@ describe('AuthController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [
-        AuthService,
-        UsersService,
-        JwtService,
-        PrismaService,
-      ],
+      providers: [AuthService, UsersService, JwtService, PrismaService],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
@@ -28,5 +23,3 @@ describe('AuthController', () => {
     expect(controller).toBeDefined();
   });
 });
-
-

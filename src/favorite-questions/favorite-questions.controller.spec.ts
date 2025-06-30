@@ -1,9 +1,9 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { FavoriteQuestionsController } from "./favorite-questions.controller";
-import { FavoriteQuestionsService } from "./favorite-questions.service";
-import { PrismaService } from "../prisma/prisma.service";
+import { Test, TestingModule } from '@nestjs/testing';
+import { FavoriteQuestionsController } from './favorite-questions.controller';
+import { FavoriteQuestionsService } from './favorite-questions.service';
+import { PrismaService } from '../prisma/prisma.service';
 
-describe("FavoriteQuestionsController", () => {
+describe('FavoriteQuestionsController', () => {
   let controller: FavoriteQuestionsController;
   let service: FavoriteQuestionsService;
 
@@ -13,13 +13,13 @@ describe("FavoriteQuestionsController", () => {
       providers: [FavoriteQuestionsService, PrismaService],
     }).compile();
 
-    controller = module.get<FavoriteQuestionsController>(FavoriteQuestionsController);
+    controller = module.get<FavoriteQuestionsController>(
+      FavoriteQuestionsController,
+    );
     service = module.get<FavoriteQuestionsService>(FavoriteQuestionsService);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 });
-
-

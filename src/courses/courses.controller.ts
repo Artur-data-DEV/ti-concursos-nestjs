@@ -104,7 +104,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async update(
-    @Param("id") id: string,
+    @Param('id') id: string,
     @Body() updateCourseDto: any,
     @Request() req: any,
   ) {
@@ -141,10 +141,7 @@ export class CoursesController {
     // Apenas PROFESSOR e ADMIN podem atualizar cursos, ou o instrutor do curso
     if (
       token.role !== 'ADMIN' &&
-      !(
-        token.role === 'PROFESSOR' &&
-        token.sub === existingCourse.instructorId
-      )
+      !(token.role === 'PROFESSOR' && token.sub === existingCourse.instructorId)
     ) {
       throw new ForbiddenException('Não autorizado.');
     }
@@ -167,7 +164,7 @@ export class CoursesController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async remove(@Param("id") id: string, @Request() req: any) {
+  async remove(@Param('id') id: string, @Request() req: any) {
     const token = req.user;
 
     if (!token) {
@@ -208,4 +205,3 @@ export class CoursesController {
     }
   }
 }
-

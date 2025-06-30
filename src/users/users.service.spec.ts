@@ -94,7 +94,11 @@ describe('UsersService', () => {
   describe('findOne', () => {
     it('should return user by id', async () => {
       const userId = randomUUID();
-      const mockUser = { id: userId, name: 'Test User', email: 'test@example.com' };
+      const mockUser = {
+        id: userId,
+        name: 'Test User',
+        email: 'test@example.com',
+      };
 
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
@@ -189,4 +193,3 @@ describe('UsersService', () => {
     });
   });
 });
-

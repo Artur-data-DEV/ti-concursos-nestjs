@@ -17,28 +17,33 @@ import { AnswerAttemptsService } from './answer-attempts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { z, ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
+import {
+  CreateAnswerAttemptDto,
+  UpdateAnswerAttemptDto,
+} from './answer-attempts.dto';
 
-// Schemas
+// Zod Schemas
 const answerAttemptCreateSchema = z.object({
-  answerId: z.string().uuid().min(1, 'O ID da resposta é obrigatório.'),
+  answerId: z
+    .string()
+    .uuid({ message: 'O ID da resposta deve ser um UUID válido.' }),
   isCorrect: z.boolean(),
   timeSpent: z
     .number()
-    .int()
-    .min(0, 'O tempo gasto deve ser um número inteiro inteiro positivo.')
-    .optional()
-    .nullable(),
+    .int('O tempo gasto deve ser um número inteiro.')
+    .min(0, 'O tempo gasto deve ser maior ou igual a zero.')
+    .nullable()
+    .optional(),
+  attemptAt: z.union([z.string().datetime(), z.date()]).optional().nullable(),
 });
 
 const answerAttemptUpdateSchema = answerAttemptCreateSchema.extend({
-  id: z
-    .string()
-    .uuid()
-    .min(1, 'O ID da tentativa de resposta é obrigatório para atualização.'),
+  id: z.string().uuid('O ID da tentativa deve ser um UUID válido.'),
 });
 
 const idSchema = z.object({
-  id: z.string().uuid().min(1, 'O ID é obrigatório.'),
+  id: z.string().uuid('O ID fornecido é inválido.'),
 });
 
 @Controller('answer-attempts')
@@ -55,48 +60,43 @@ export class AnswerAttemptsController {
   @UseGuards(JwtAuthGuard)
   @Get()
   async findAll(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Query('userId') userId?: string,
     @Query('questionId') questionId?: string,
     @Query('isCorrect') isCorrect?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    const token = req.user;
+    const { user } = req;
 
-    if (!token) {
-      throw new ForbiddenException('Não autenticado.');
+    if (!user) throw new ForbiddenException('Não autenticado.');
+
+    if (user.role !== 'ADMIN') {
+      if (!userId || userId !== user.sub) {
+        throw new ForbiddenException('Não autorizado.');
+      }
     }
 
-    if (userId && token.role !== 'ADMIN' && token.sub !== userId) {
-      throw new ForbiddenException('Não autorizado.');
-    }
-
-    if (token.role !== 'ADMIN' && !userId) {
-      throw new ForbiddenException('Não autorizado.');
-    }
-
-    const filters = {
+    return this.answerAttemptsService.findAll({
       userId,
       questionId,
       isCorrect,
       limit,
       offset,
-    };
-
-    return this.answerAttemptsService.findAll(filters);
+    });
   }
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async create(@Body() createAnswerAttemptDto: any, @Request() req: any) {
-    const token = req.user;
+  async create(
+    @Body() createDto: CreateAnswerAttemptDto,
+    @Request() req: AuthenticatedRequest,
+  ) {
+    const { user } = req;
 
-    if (!token) {
-      throw new ForbiddenException('Não autenticado.');
-    }
+    if (!user) throw new ForbiddenException('Não autenticado.');
 
-    const result = answerAttemptCreateSchema.safeParse(createAnswerAttemptDto);
+    const result = answerAttemptCreateSchema.safeParse(createDto);
 
     if (!result.success) {
       throw new BadRequestException({
@@ -108,36 +108,28 @@ export class AnswerAttemptsController {
     const data = result.data;
 
     const answer = await this.answerAttemptsService.findAnswer(data.answerId);
+    if (!answer) throw new NotFoundException('Resposta não encontrada.');
 
-    if (!answer) {
-      throw new NotFoundException('Resposta não encontrada.');
-    }
-
-    if (token.role !== 'ADMIN' && token.sub !== answer.userId) {
+    if (user.role !== 'ADMIN' && user.sub !== answer.userId) {
       throw new ForbiddenException('Não autorizado.');
     }
 
-    return this.answerAttemptsService.create(data);
+    return this.answerAttemptsService.create({
+      ...data,
+      attemptAt: data.attemptAt ? new Date(data.attemptAt) : undefined,
+    });
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async update(
-    @Param("id") id: string,
-    @Body() updateAnswerAttemptDto: any,
-    @Request() req: any,
+    @Param('id') id: string,
+    @Body() updateDto: UpdateAnswerAttemptDto,
+    @Request() req: AuthenticatedRequest,
   ) {
-    const token = req.user;
+    const { user } = req;
 
-    if (!token) {
-      throw new ForbiddenException('Não autenticado.');
-    }
-
-    if (!id) {
-      throw new BadRequestException(
-        'ID da tentativa de resposta inválido ou ausente.',
-      );
-    }
+    if (!user) throw new ForbiddenException('Não autenticado.');
 
     const parsedId = idSchema.safeParse({ id });
     if (!parsedId.success) {
@@ -147,8 +139,7 @@ export class AnswerAttemptsController {
       });
     }
 
-    const result = answerAttemptUpdateSchema.safeParse(updateAnswerAttemptDto);
-
+    const result = answerAttemptUpdateSchema.safeParse(updateDto);
     if (!result.success) {
       throw new BadRequestException({
         message: 'Dados inválidos para atualização da tentativa de resposta.',
@@ -156,23 +147,21 @@ export class AnswerAttemptsController {
       });
     }
 
-    const existingAttempt = await this.answerAttemptsService.findOne(
-      parsedId.data.id,
-    );
-
-    if (!existingAttempt) {
+    const attempt = await this.answerAttemptsService.findOne(parsedId.data.id);
+    if (!attempt)
       throw new NotFoundException('Tentativa de resposta não encontrada.');
-    }
 
-    if (token.role !== 'ADMIN' && token.sub !== existingAttempt.answer.userId) {
+    if (user.role !== 'ADMIN' && user.sub !== attempt.answer.userId) {
       throw new ForbiddenException('Não autorizado.');
     }
 
     try {
-      return await this.answerAttemptsService.update(
-        parsedId.data.id,
-        result.data,
-      );
+      return await this.answerAttemptsService.update(parsedId.data.id, {
+        ...result.data,
+        attemptAt: result.data.attemptAt
+          ? new Date(result.data.attemptAt)
+          : undefined,
+      });
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -182,22 +171,18 @@ export class AnswerAttemptsController {
           'Tentativa de resposta não encontrada para atualização.',
         );
       }
-      throw error;
+      throw new Error(
+        'Erro interno do servidor ao atualizar tentativa de resposta.',
+      );
     }
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  async remove(@Param("id") id: string, @Request() req: any) {
-    const token = req.user;
+  async remove(@Param('id') id: string, @Request() req: AuthenticatedRequest) {
+    const { user } = req;
 
-    if (!token) {
-      throw new ForbiddenException('Não autenticado.');
-    }
-
-    if (!id) {
-      throw new BadRequestException('ID é obrigatório para exclusão.');
-    }
+    if (!user) throw new ForbiddenException('Não autenticado.');
 
     const parsedId = idSchema.safeParse({ id });
     if (!parsedId.success) {
@@ -207,15 +192,11 @@ export class AnswerAttemptsController {
       });
     }
 
-    const existingAttempt = await this.answerAttemptsService.findOne(
-      parsedId.data.id,
-    );
-
-    if (!existingAttempt) {
+    const attempt = await this.answerAttemptsService.findOne(parsedId.data.id);
+    if (!attempt)
       throw new NotFoundException('Tentativa de resposta não encontrada.');
-    }
 
-    if (token.role !== 'ADMIN' && token.sub !== existingAttempt.answer.userId) {
+    if (user.role !== 'ADMIN' && user.sub !== attempt.answer.userId) {
       throw new ForbiddenException('Não autorizado.');
     }
 
@@ -231,8 +212,9 @@ export class AnswerAttemptsController {
           'Tentativa de resposta não encontrada para exclusão.',
         );
       }
-      throw error;
+      throw new Error(
+        'Erro interno do servidor ao excluir tentativa de resposta.',
+      );
     }
   }
 }
-

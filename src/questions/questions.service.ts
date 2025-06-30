@@ -136,4 +136,3 @@ export class QuestionsService {
     return this.prisma.question.delete({ where: { id } });
   }
 }
-
