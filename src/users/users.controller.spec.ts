@@ -1,66 +1,50 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard/roles.guard';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 describe('UsersController', () => {
   let controller: UsersController;
   let service: UsersService;
 
-  const mockUserId = randomUUID();
-  const mockAdminId = randomUUID();
-
-  const mockUser = {
-    id: mockUserId,
-    name: 'Test User',
-    email: 'test@example.com',
-    password: 'hashedpassword',
-    role: 'STUDENT',
+  const mockUsersService = {
+    findAll: jest.fn(),
+    findOne: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    remove: jest.fn(),
   };
 
-  const mockAdminUser = {
-    id: mockAdminId,
-    name: 'Admin User',
-    email: 'admin@example.com',
-    password: 'hashedpassword',
-    role: 'ADMIN',
+  const mockJwtAuthGuard = {
+    canActivate: jest.fn(() => true),
   };
 
-  const mockPrismaService = {
-    user: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
+  const mockRolesGuard = {
+    canActivate: jest.fn(() => true),
   };
-
-  const mockAuthenticatedAdminRequest: AuthenticatedRequest = {
-    user: {
-      sub: mockAdminId,
-      role: 'ADMIN',
-    },
-  } as AuthenticatedRequest;
-
-  const mockAuthenticatedStudentRequest: AuthenticatedRequest = {
-    user: {
-      sub: mockUserId,
-      role: 'STUDENT',
-    },
-  } as AuthenticatedRequest;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UsersController],
       providers: [
-        UsersService,
-        { provide: PrismaService, useValue: mockPrismaService },
+        {
+          provide: UsersService,
+          useValue: mockUsersService,
+        },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue(mockJwtAuthGuard)
+      .overrideGuard(RolesGuard)
+      .useValue(mockRolesGuard)
+      .compile();
 
     controller = module.get<UsersController>(UsersController);
     service = module.get<UsersService>(UsersService);
@@ -75,81 +59,124 @@ describe('UsersController', () => {
   });
 
   describe('findAll', () => {
-    it('should return a list of users for ADMIN', async () => {
-      mockPrismaService.user.findMany.mockResolvedValue([mockUser, mockAdminUser]);
+    const mockAdminId = randomUUID();
+    const mockStudentId = randomUUID();
 
-      const result = await controller.findAll(mockAuthenticatedAdminRequest);
+    it('should return list of users for ADMIN', async () => {
+      const mockUsers = [
+        { id: mockAdminId, name: 'Admin User', role: 'ADMIN' },
+        { id: mockStudentId, name: 'Student User', role: 'STUDENT' },
+      ];
 
-      expect(result).toEqual([mockUser, mockAdminUser]);
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledTimes(1);
+      mockUsersService.findAll.mockResolvedValue(mockUsers);
+
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
+
+      const result = await controller.findAll(req);
+
+      expect(result).toEqual(mockUsers);
+      expect(mockUsersService.findAll).toHaveBeenCalled();
     });
 
     it('should return user by ID for ADMIN', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      const mockUser = {
+        id: mockStudentId,
+        name: 'Student User',
+        role: 'STUDENT',
+      };
 
-      const result = await controller.findAll(mockAuthenticatedAdminRequest, mockUserId);
+      mockUsersService.findOne.mockResolvedValue(mockUser);
+
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
+
+      const result = await controller.findAll(req, mockStudentId);
 
       expect(result).toEqual(mockUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({ where: { id: mockUserId } });
+      expect(mockUsersService.findOne).toHaveBeenCalledWith(mockStudentId);
     });
 
     it('should return own profile for STUDENT', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      const mockUser = {
+        id: mockStudentId,
+        name: 'Student User',
+        role: 'STUDENT',
+      };
 
-      const result = await controller.findAll(mockAuthenticatedStudentRequest, mockUserId);
+      mockUsersService.findOne.mockResolvedValue(mockUser);
+
+      const req = {
+        user: { sub: mockStudentId, role: 'STUDENT' },
+      };
+
+      const result = await controller.findAll(req, mockStudentId);
 
       expect(result).toEqual(mockUser);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({ where: { id: mockUserId } });
+      expect(mockUsersService.findOne).toHaveBeenCalledWith(mockStudentId);
     });
 
     it('should throw ForbiddenException for STUDENT accessing other user profile', async () => {
-      await expect(
-        controller.findAll(mockAuthenticatedStudentRequest, mockAdminId),
-      ).rejects.toThrow(ForbiddenException);
+      const req = {
+        user: { sub: mockStudentId, role: 'STUDENT' },
+      };
+
+      await expect(controller.findAll(req, mockAdminId)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should throw ForbiddenException for non-ADMIN listing all users', async () => {
-      await expect(controller.findAll(mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      const req = {
+        user: { sub: mockStudentId, role: 'STUDENT' },
+      };
+
+      await expect(controller.findAll(req)).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
-      await expect(controller.findAll(mockAuthenticatedAdminRequest, 'invalid-id')).rejects.toThrow(BadRequestException);
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
+
+      await expect(controller.findAll(req, 'invalid-id')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException when user not found', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockUsersService.findOne.mockResolvedValue(null);
 
-      await expect(controller.findAll(mockAuthenticatedAdminRequest, randomUUID())).rejects.toThrow(NotFoundException);
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
+
+      await expect(controller.findAll(req, mockStudentId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('create', () => {
-    const createUserDto = {
-      name: 'New User',
-      email: 'newuser@example.com',
-      password: 'password123',
-      role: 'STUDENT',
-    };
+    const mockAdminId = randomUUID();
 
-    it("should throw BadRequestException for invalid data", async () => {
-      const invalidDto = {
-        name: "",
-        email: "invalid-email",
-        password: "123",
-        role: "INVALID_ROLE",
+    it('should create user for ADMIN', async () => {
+      const createUserDto = {
+        name: 'New User',
+        email: 'newuser@example.com',
+        password: 'password123',
+        role: 'STUDENT',
       };
 
-      await expect(controller.create(invalidDto)).rejects.toThrow(BadRequestException);
-    });
-
-    it("should create user for ADMIN", async () => {
       const createdUser = { id: randomUUID(), ...createUserDto };
-      mockPrismaService.user.create.mockResolvedValue(createdUser);
+      mockUsersService.create.mockResolvedValue(createdUser);
 
       const result = await controller.create(createUserDto);
 
       expect(result).toEqual(createdUser);
-      expect(mockPrismaService.user.create).toHaveBeenCalledWith({ data: createUserDto });
+      expect(mockUsersService.create).toHaveBeenCalledWith(createUserDto);
     });
 
     it('should throw BadRequestException for invalid data', async () => {
@@ -160,101 +187,139 @@ describe('UsersController', () => {
         role: 'INVALID_ROLE',
       };
 
-      await expect(controller.create(invalidDto)).rejects.toThrow(BadRequestException);
+      await expect(controller.create(invalidDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('update', () => {
-    const updateDto = { name: 'Updated Name' };
+    const mockAdminId = randomUUID();
+    const mockStudentId = randomUUID();
 
     it('should update user for ADMIN', async () => {
-      const updatedUser = { ...mockUser, ...updateDto };
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+      const updateDto = { name: 'Updated Name' };
+      const updatedUser = { id: mockStudentId, name: 'Updated Name' };
 
-      const result = await controller.update(mockUserId, updateDto, mockAuthenticatedAdminRequest);
+      mockUsersService.update.mockResolvedValue(updatedUser);
+
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
+
+      const result = await controller.update(mockStudentId, updateDto, req);
 
       expect(result).toEqual(updatedUser);
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: mockUserId },
-        data: updateDto,
-      });
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        mockStudentId,
+        updateDto,
+      );
     });
 
     it('should update own profile for STUDENT', async () => {
-      const updatedUser = { ...mockUser, ...updateDto };
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.update.mockResolvedValue(updatedUser);
+      const updateDto = { name: 'Updated Name' };
+      const updatedUser = { id: mockStudentId, name: 'Updated Name' };
 
-      const result = await controller.update(mockUserId, updateDto, mockAuthenticatedStudentRequest);
+      mockUsersService.update.mockResolvedValue(updatedUser);
+
+      const req = {
+        user: { sub: mockStudentId, role: 'STUDENT' },
+      };
+
+      const result = await controller.update(mockStudentId, updateDto, req);
 
       expect(result).toEqual(updatedUser);
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: mockUserId },
-        data: updateDto,
-      });
+      expect(mockUsersService.update).toHaveBeenCalledWith(
+        mockStudentId,
+        updateDto,
+      );
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(
-        controller.update("invalid-id", updateDto, mockAuthenticatedAdminRequest),
-      ).rejects.toThrow(BadRequestException);
-    });
+    it('should throw ForbiddenException for STUDENT updating other user', async () => {
+      const updateDto = { name: 'Updated Name' };
 
-    it("should throw BadRequestException for invalid data", async () => {
-      const invalidDto = { email: "invalid-email" };
+      const req = {
+        user: { sub: mockStudentId, role: 'STUDENT' },
+      };
 
       await expect(
-        controller.update(mockUserId, invalidDto, mockAuthenticatedAdminRequest),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it("should throw NotFoundException when user not found", async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
-
-      await expect(controller.update(randomUUID(), updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
-    });
-
-    it("should throw ForbiddenException for STUDENT updating other user", async () => {
-      await expect(
-        controller.update(mockAdminId, updateDto, mockAuthenticatedStudentRequest),
+        controller.update(mockAdminId, updateDto, req),
       ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw BadRequestException for invalid ID', async () => {
+      const updateDto = { name: 'Updated Name' };
+
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
+
+      await expect(
+        controller.update('invalid-id', updateDto, req),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException for invalid data', async () => {
+      const invalidDto = { email: 'invalid-email' };
+
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
+
+      await expect(
+        controller.update(mockStudentId, invalidDto, req),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('remove', () => {
-    it('should delete user for ADMIN', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.delete.mockResolvedValue(mockUser);
+    const mockAdminId = randomUUID();
+    const mockStudentId = randomUUID();
 
-      const result = await controller.remove(mockUserId, mockAuthenticatedAdminRequest);
+    it('should delete user for ADMIN', async () => {
+      mockUsersService.remove.mockResolvedValue({ id: mockStudentId });
+
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
+
+      const result = await controller.remove(mockStudentId, req);
 
       expect(result).toEqual({ message: 'Usuário deletado com sucesso.' });
-      expect(mockPrismaService.user.delete).toHaveBeenCalledWith({ where: { id: mockUserId } });
+      expect(mockUsersService.remove).toHaveBeenCalledWith(mockStudentId);
     });
 
     it('should delete own account for STUDENT', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.delete.mockResolvedValue(mockUser);
+      mockUsersService.remove.mockResolvedValue({ id: mockStudentId });
 
-      const result = await controller.remove(mockUserId, mockAuthenticatedStudentRequest);
+      const req = {
+        user: { sub: mockStudentId, role: 'STUDENT' },
+      };
+
+      const result = await controller.remove(mockStudentId, req);
 
       expect(result).toEqual({ message: 'Usuário deletado com sucesso.' });
-      expect(mockPrismaService.user.delete).toHaveBeenCalledWith({ where: { id: mockUserId } });
+      expect(mockUsersService.remove).toHaveBeenCalledWith(mockStudentId);
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.remove("invalid-id", mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw ForbiddenException for STUDENT deleting other user', async () => {
+      const req = {
+        user: { sub: mockStudentId, role: 'STUDENT' },
+      };
+
+      await expect(controller.remove(mockAdminId, req)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
-    it("should throw NotFoundException when user not found", async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+    it('should throw BadRequestException for invalid ID', async () => {
+      const req = {
+        user: { sub: mockAdminId, role: 'ADMIN' },
+      };
 
-      await expect(controller.remove(randomUUID(), mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
-    });
-
-    it("should throw ForbiddenException for STUDENT deleting other user", async () => {
-      await expect(controller.remove(mockAdminId, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(controller.remove('invalid-id', req)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });
