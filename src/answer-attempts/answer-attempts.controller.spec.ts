@@ -145,7 +145,12 @@ describe('AnswerAttemptsController', () => {
       timeSpent: 60,
     };
 
-    it('deve criar tentativa como ADMIN', async () => {
+    it("should throw BadRequestException for invalid data", async () => {
+      const invalidDto = { answerId: "", isCorrect: true, timeSpent: 60 };
+      await expect(controller.create(invalidDto, mockUserAdmin)).rejects.toThrow(BadRequestException);
+    });
+
+    it("deve criar tentativa como ADMIN", async () => {
       mockPrismaService.answer.findUnique.mockResolvedValue({ userId });
       mockPrismaService.answerAttempt.create.mockResolvedValue({
         id: attemptId,
@@ -201,7 +206,12 @@ describe('AnswerAttemptsController', () => {
       attemptAt: new Date(),
     };
 
-    it('deve atualizar como ADMIN', async () => {
+    it("should throw BadRequestException for invalid data", async () => {
+      const invalidDto = { answerId: "", isCorrect: true, timeSpent: 80 };
+      await expect(controller.update(attemptId, invalidDto, mockUserAdmin)).rejects.toThrow(BadRequestException);
+    });
+
+    it("deve atualizar como ADMIN", async () => {
       mockPrismaService.answerAttempt.findUnique.mockResolvedValue(
         mockAnswerAttempt,
       );
@@ -234,7 +244,11 @@ describe('AnswerAttemptsController', () => {
 
   /*** DELETE ***/
   describe('remove', () => {
-    it('deve remover como ADMIN', async () => {
+    it("should throw BadRequestException for invalid ID", async () => {
+      await expect(controller.remove("invalid-id", mockUserAdmin)).rejects.toThrow(BadRequestException);
+    });
+
+    it("deve remover como ADMIN", async () => {
       mockPrismaService.answerAttempt.findUnique.mockResolvedValue(
         mockAnswerAttempt,
       );
