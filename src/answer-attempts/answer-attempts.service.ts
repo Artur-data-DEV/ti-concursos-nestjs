@@ -1,20 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAnswerAttemptDto } from './answer-attempts.dto';
-
-export type Filters = {
-  userId?: string;
-  questionId?: string;
-  isCorrect?: string;
-  limit?: string;
-  offset?: string;
-};
+import {
+  AttemptFilterDto,
+  CreateAnswerAttemptDto,
+} from './answer-attempts.dto';
 
 @Injectable()
 export class AnswerAttemptsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(filters: Filters) {
+  async findAll(filters: AttemptFilterDto) {
     const where = {
       answer: {
         ...(filters.userId ? { userId: filters.userId } : {}),
@@ -28,8 +23,8 @@ export class AnswerAttemptsService {
     return this.prisma.answerAttempt.findMany({
       where,
       include: { answer: true },
-      take: filters.limit ? parseInt(filters.limit) : undefined,
-      skip: filters.offset ? parseInt(filters.offset) : undefined,
+      take: filters.limit,
+      skip: filters.offset,
       orderBy: { attemptAt: 'desc' },
     });
   }
