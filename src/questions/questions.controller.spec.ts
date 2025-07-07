@@ -176,6 +176,12 @@ describe('QuestionsController', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('should throw ForbiddenException for STUDENT', async () => {
+      await expect(
+        controller.create(createQuestionDto, mockAuthenticatedStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
     it('should create question for PROFESSOR', async () => {
       const createdQuestion = {
         id: randomUUID(),
@@ -213,25 +219,57 @@ describe('QuestionsController', () => {
         data: { ...createQuestionDto, authorId: mockAdminId },
       });
     });
-
-    it('should throw ForbiddenException for STUDENT', async () => {
-      await expect(
-        controller.create(createQuestionDto, mockAuthenticatedStudentRequest),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('should throw BadRequestException for invalid data', async () => {
-      const invalidDto = { ...createQuestionDto, text: '' };
-      await expect(
-        controller.create(invalidDto, mockAuthenticatedProfessorRequest),
-      ).rejects.toThrow(BadRequestException);
-    });
   });
 
   describe('update', () => {
     const updateDto = { text: 'Updated Question' };
 
-    it('should update question for ADMIN', async () => {
+    it("should throw BadRequestException for invalid ID", async () => {
+      await expect(
+        controller.update(
+          'invalid-id',
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw NotFoundException when question not found", async () => {
+      mockPrismaService.question.findUnique.mockResolvedValue(null);
+
+      await expect(
+        controller.update(
+          randomUUID(),
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it("should throw ForbiddenException for PROFESSOR updating other author question", async () => {
+      const otherProfessorRequest = {
+        user: { sub: randomUUID(), role: 'PROFESSOR' },
+      } as AuthenticatedRequest;
+      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
+
+      await expect(
+        controller.update(mockQuestionId, updateDto, otherProfessorRequest),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("should throw ForbiddenException for STUDENT", async () => {
+      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
+
+      await expect(
+        controller.update(
+          mockQuestionId,
+          updateDto,
+          mockAuthenticatedStudentRequest,
+        ),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it("should update question for ADMIN", async () => {
       const updatedQuestion = { ...mockQuestion, ...updateDto };
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.update.mockResolvedValue(updatedQuestion);
@@ -249,7 +287,7 @@ describe('QuestionsController', () => {
       });
     });
 
-    it('should update own question for PROFESSOR', async () => {
+    it("should update own question for PROFESSOR", async () => {
       const updatedQuestion = { ...mockQuestion, ...updateDto };
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.update.mockResolvedValue(updatedQuestion);
@@ -265,51 +303,6 @@ describe('QuestionsController', () => {
         where: { id: mockQuestionId },
         data: updateDto,
       });
-    });
-
-    it('should throw BadRequestException for invalid ID', async () => {
-      await expect(
-        controller.update(
-          'invalid-id',
-          updateDto,
-          mockAuthenticatedAdminRequest,
-        ),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw NotFoundException when question not found', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(null);
-
-      await expect(
-        controller.update(
-          randomUUID(),
-          updateDto,
-          mockAuthenticatedAdminRequest,
-        ),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw ForbiddenException for PROFESSOR updating other author question', async () => {
-      const otherProfessorRequest = {
-        user: { sub: randomUUID(), role: 'PROFESSOR' },
-      } as AuthenticatedRequest;
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
-
-      await expect(
-        controller.update(mockQuestionId, updateDto, otherProfessorRequest),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('should throw ForbiddenException for STUDENT', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
-
-      await expect(
-        controller.update(
-          mockQuestionId,
-          updateDto,
-          mockAuthenticatedStudentRequest,
-        ),
-      ).rejects.toThrow(ForbiddenException);
     });
   });
 
