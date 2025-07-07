@@ -4,7 +4,11 @@ import { ProgressService } from './progress.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 describe('ProgressController', () => {
   let controller: ProgressController;
@@ -89,10 +93,15 @@ describe('ProgressController', () => {
     it('should return progress by ID for ADMIN', async () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(mockProgress);
 
-      const result = await controller.findAll(mockAuthenticatedAdminRequest, mockProgressId);
+      const result = await controller.findAll(
+        mockAuthenticatedAdminRequest,
+        mockProgressId,
+      );
 
       expect(result).toEqual(mockProgress);
-      expect(mockPrismaService.progress.findUnique).toHaveBeenCalledWith({ where: { id: mockProgressId } });
+      expect(mockPrismaService.progress.findUnique).toHaveBeenCalledWith({
+        where: { id: mockProgressId },
+      });
     });
 
     it('should return own progress for STUDENT', async () => {
@@ -101,36 +110,52 @@ describe('ProgressController', () => {
       const result = await controller.findAll(mockAuthenticatedStudentRequest);
 
       expect(result).toEqual([mockProgress]);
-      expect(mockPrismaService.progress.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: {
-          userId: mockUserId,
-        },
-      }));
+      expect(mockPrismaService.progress.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: mockUserId,
+          },
+        }),
+      );
     });
 
     it('should return specific progress for STUDENT if it belongs to them', async () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(mockProgress);
 
-      const result = await controller.findAll(mockAuthenticatedStudentRequest, mockProgressId);
+      const result = await controller.findAll(
+        mockAuthenticatedStudentRequest,
+        mockProgressId,
+      );
 
       expect(result).toEqual(mockProgress);
-      expect(mockPrismaService.progress.findUnique).toHaveBeenCalledWith({ where: { id: mockProgressId } });
+      expect(mockPrismaService.progress.findUnique).toHaveBeenCalledWith({
+        where: { id: mockProgressId },
+      });
     });
 
     it('should throw ForbiddenException for STUDENT accessing other user progress', async () => {
-      mockPrismaService.progress.findUnique.mockResolvedValue({ ...mockProgress, userId: randomUUID() });
+      mockPrismaService.progress.findUnique.mockResolvedValue({
+        ...mockProgress,
+        userId: randomUUID(),
+      });
 
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, mockProgressId)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.findAll(mockAuthenticatedStudentRequest, mockProgressId),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
-      await expect(controller.findAll(mockAuthenticatedAdminRequest, 'invalid-id')).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.findAll(mockAuthenticatedAdminRequest, 'invalid-id'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when progress not found', async () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(null);
 
-      await expect(controller.findAll(mockAuthenticatedAdminRequest, randomUUID())).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.findAll(mockAuthenticatedAdminRequest, randomUUID()),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should apply filters when provided', async () => {
@@ -152,14 +177,16 @@ describe('ProgressController', () => {
         filters.offset,
       );
 
-      expect(mockPrismaService.progress.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: {
-          userId: filters.userId,
-          courseId: filters.courseId,
-        },
-        take: 10,
-        skip: 0,
-      }));
+      expect(mockPrismaService.progress.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: filters.userId,
+            courseId: filters.courseId,
+          },
+          take: 10,
+          skip: 0,
+        }),
+      );
     });
   });
 
@@ -175,51 +202,83 @@ describe('ProgressController', () => {
     it('should create progress for ADMIN', async () => {
       const createdProgress = { id: randomUUID(), ...createProgressDto };
       mockPrismaService.user.findUnique.mockResolvedValue({ id: mockUserId });
-      mockPrismaService.course.findUnique.mockResolvedValue({ id: mockCourseId });
+      mockPrismaService.course.findUnique.mockResolvedValue({
+        id: mockCourseId,
+      });
       mockPrismaService.progress.create.mockResolvedValue(createdProgress);
 
-      const result = await controller.create(createProgressDto, mockAuthenticatedAdminRequest);
+      const result = await controller.create(
+        createProgressDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(createdProgress);
-      expect(mockPrismaService.progress.create).toHaveBeenCalledWith({ data: createProgressDto });
+      expect(mockPrismaService.progress.create).toHaveBeenCalledWith({
+        data: createProgressDto,
+      });
     });
 
     it('should create progress for STUDENT for themselves', async () => {
       const createdProgress = { id: randomUUID(), ...createProgressDto };
       mockPrismaService.user.findUnique.mockResolvedValue({ id: mockUserId });
-      mockPrismaService.course.findUnique.mockResolvedValue({ id: mockCourseId });
+      mockPrismaService.course.findUnique.mockResolvedValue({
+        id: mockCourseId,
+      });
       mockPrismaService.progress.create.mockResolvedValue(createdProgress);
 
-      const result = await controller.create({ courseId: mockCourseId }, mockAuthenticatedStudentRequest);
+      const result = await controller.create(
+        { courseId: mockCourseId },
+        mockAuthenticatedStudentRequest,
+      );
 
       expect(result).toEqual(createdProgress);
-      expect(mockPrismaService.progress.create).toHaveBeenCalledWith({ data: { userId: mockUserId, courseId: mockCourseId, completedLessons: 0, totalLessons: 0, progressPercentage: 0 } });
+      expect(mockPrismaService.progress.create).toHaveBeenCalledWith({
+        data: {
+          userId: mockUserId,
+          courseId: mockCourseId,
+          completedLessons: 0,
+          totalLessons: 0,
+          progressPercentage: 0,
+        },
+      });
     });
 
-    it("should throw BadRequestException for invalid data", async () => {
+    it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = { userId: 'invalid-id', courseId: 'invalid-id' };
-      await expect(controller.create(invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw ForbiddenException for STUDENT creating progress for another user", async () => {
+    it('should throw ForbiddenException for STUDENT creating progress for another user', async () => {
       const otherUserId = randomUUID();
-      const otherStudentRequest = { user: { sub: otherUserId, role: 'STUDENT' } } as AuthenticatedRequest;
+      const otherStudentRequest = {
+        user: { sub: otherUserId, role: 'STUDENT' },
+      } as AuthenticatedRequest;
 
-      await expect(controller.create(createProgressDto, otherStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.create(createProgressDto, otherStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw NotFoundException if user not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
-      mockPrismaService.course.findUnique.mockResolvedValue({ id: mockCourseId });
+      mockPrismaService.course.findUnique.mockResolvedValue({
+        id: mockCourseId,
+      });
 
-      await expect(controller.create(createProgressDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.create(createProgressDto, mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw NotFoundException if course not found', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue({ id: mockUserId });
       mockPrismaService.course.findUnique.mockResolvedValue(null);
 
-      await expect(controller.create(createProgressDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.create(createProgressDto, mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -231,10 +290,17 @@ describe('ProgressController', () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(mockProgress);
       mockPrismaService.progress.update.mockResolvedValue(updatedProgress);
 
-      const result = await controller.update(mockProgressId, updateDto, mockAuthenticatedAdminRequest);
+      const result = await controller.update(
+        mockProgressId,
+        updateDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(updatedProgress);
-      expect(mockPrismaService.progress.update).toHaveBeenCalledWith({ where: { id: mockProgressId }, data: updateDto });
+      expect(mockPrismaService.progress.update).toHaveBeenCalledWith({
+        where: { id: mockProgressId },
+        data: updateDto,
+      });
     });
 
     it('should update own progress for STUDENT', async () => {
@@ -242,31 +308,65 @@ describe('ProgressController', () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(mockProgress);
       mockPrismaService.progress.update.mockResolvedValue(updatedProgress);
 
-      const result = await controller.update(mockProgressId, updateDto, mockAuthenticatedStudentRequest);
+      const result = await controller.update(
+        mockProgressId,
+        updateDto,
+        mockAuthenticatedStudentRequest,
+      );
 
       expect(result).toEqual(updatedProgress);
-      expect(mockPrismaService.progress.update).toHaveBeenCalledWith({ where: { id: mockProgressId }, data: updateDto });
+      expect(mockPrismaService.progress.update).toHaveBeenCalledWith({
+        where: { id: mockProgressId },
+        data: updateDto,
+      });
     });
 
     it('should throw ForbiddenException for STUDENT updating other user progress', async () => {
-      mockPrismaService.progress.findUnique.mockResolvedValue({ ...mockProgress, userId: randomUUID() });
+      mockPrismaService.progress.findUnique.mockResolvedValue({
+        ...mockProgress,
+        userId: randomUUID(),
+      });
 
-      await expect(controller.update(mockProgressId, updateDto, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.update(
+          mockProgressId,
+          updateDto,
+          mockAuthenticatedStudentRequest,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw BadRequestException for invalid data", async () => {
+    it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = { completedLessons: 'invalid' };
-      await expect(controller.update(mockProgressId, invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(
+          mockProgressId,
+          invalidDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.update('invalid-id', updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid ID', async () => {
+      await expect(
+        controller.update(
+          'invalid-id',
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when progress not found', async () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(null);
 
-      await expect(controller.update(randomUUID(), updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.update(
+          randomUUID(),
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -275,36 +375,55 @@ describe('ProgressController', () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(mockProgress);
       mockPrismaService.progress.delete.mockResolvedValue(mockProgress);
 
-      const result = await controller.remove(mockProgressId, mockAuthenticatedAdminRequest);
+      const result = await controller.remove(
+        mockProgressId,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual({ message: 'Progress deleted' });
-      expect(mockPrismaService.progress.delete).toHaveBeenCalledWith({ where: { id: mockProgressId } });
+      expect(mockPrismaService.progress.delete).toHaveBeenCalledWith({
+        where: { id: mockProgressId },
+      });
     });
 
     it('should delete own progress for STUDENT', async () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(mockProgress);
       mockPrismaService.progress.delete.mockResolvedValue(mockProgress);
 
-      const result = await controller.remove(mockProgressId, mockAuthenticatedStudentRequest);
+      const result = await controller.remove(
+        mockProgressId,
+        mockAuthenticatedStudentRequest,
+      );
 
       expect(result).toEqual({ message: 'Progress deleted' });
-      expect(mockPrismaService.progress.delete).toHaveBeenCalledWith({ where: { id: mockProgressId } });
+      expect(mockPrismaService.progress.delete).toHaveBeenCalledWith({
+        where: { id: mockProgressId },
+      });
     });
 
     it('should throw ForbiddenException for STUDENT deleting other user progress', async () => {
-      mockPrismaService.progress.findUnique.mockResolvedValue({ ...mockProgress, userId: randomUUID() });
+      mockPrismaService.progress.findUnique.mockResolvedValue({
+        ...mockProgress,
+        userId: randomUUID(),
+      });
 
-      await expect(controller.remove(mockProgressId, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.remove(mockProgressId, mockAuthenticatedStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.remove("invalid-id", mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid ID', async () => {
+      await expect(
+        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when progress not found', async () => {
       mockPrismaService.progress.findUnique.mockResolvedValue(null);
 
-      await expect(controller.remove(randomUUID(), mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.remove(randomUUID(), mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

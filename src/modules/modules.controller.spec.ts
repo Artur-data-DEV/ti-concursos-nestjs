@@ -4,7 +4,11 @@ import { ModulesService } from './modules.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 describe('ModulesController', () => {
   let controller: ModulesController;
@@ -92,20 +96,29 @@ describe('ModulesController', () => {
     it('should return module by ID for any authenticated user', async () => {
       mockPrismaService.module.findUnique.mockResolvedValue(mockModule);
 
-      const result = await controller.findAll(mockAuthenticatedStudentRequest, mockModuleId);
+      const result = await controller.findAll(
+        mockAuthenticatedStudentRequest,
+        mockModuleId,
+      );
 
       expect(result).toEqual(mockModule);
-      expect(mockPrismaService.module.findUnique).toHaveBeenCalledWith({ where: { id: mockModuleId } });
+      expect(mockPrismaService.module.findUnique).toHaveBeenCalledWith({
+        where: { id: mockModuleId },
+      });
     });
 
     it('should throw BadRequestException for invalid module ID', async () => {
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, 'invalid-id')).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.findAll(mockAuthenticatedStudentRequest, 'invalid-id'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when module not found', async () => {
       mockPrismaService.module.findUnique.mockResolvedValue(null);
 
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, randomUUID())).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.findAll(mockAuthenticatedStudentRequest, randomUUID()),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should apply filters when provided', async () => {
@@ -125,13 +138,15 @@ describe('ModulesController', () => {
         filters.offset,
       );
 
-      expect(mockPrismaService.module.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: {
-          courseId: filters.courseId,
-        },
-        take: 10,
-        skip: 0,
-      }));
+      expect(mockPrismaService.module.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            courseId: filters.courseId,
+          },
+          take: 10,
+          skip: 0,
+        }),
+      );
     });
   });
 
@@ -145,39 +160,59 @@ describe('ModulesController', () => {
 
     it('should create module for ADMIN', async () => {
       const createdModule = { id: randomUUID(), ...createModuleDto };
-      mockPrismaService.course.findUnique.mockResolvedValue({ id: mockCourseId });
+      mockPrismaService.course.findUnique.mockResolvedValue({
+        id: mockCourseId,
+      });
       mockPrismaService.module.create.mockResolvedValue(createdModule);
 
-      const result = await controller.create(createModuleDto, mockAuthenticatedAdminRequest);
+      const result = await controller.create(
+        createModuleDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(createdModule);
-      expect(mockPrismaService.module.create).toHaveBeenCalledWith({ data: createModuleDto });
+      expect(mockPrismaService.module.create).toHaveBeenCalledWith({
+        data: createModuleDto,
+      });
     });
 
     it('should create module for PROFESSOR', async () => {
       const createdModule = { id: randomUUID(), ...createModuleDto };
-      mockPrismaService.course.findUnique.mockResolvedValue({ id: mockCourseId });
+      mockPrismaService.course.findUnique.mockResolvedValue({
+        id: mockCourseId,
+      });
       mockPrismaService.module.create.mockResolvedValue(createdModule);
 
-      const result = await controller.create(createModuleDto, mockAuthenticatedProfessorRequest);
+      const result = await controller.create(
+        createModuleDto,
+        mockAuthenticatedProfessorRequest,
+      );
 
       expect(result).toEqual(createdModule);
-      expect(mockPrismaService.module.create).toHaveBeenCalledWith({ data: createModuleDto });
+      expect(mockPrismaService.module.create).toHaveBeenCalledWith({
+        data: createModuleDto,
+      });
     });
 
-    it("should throw BadRequestException for invalid data", async () => {
+    it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = { ...createModuleDto, title: '' };
-      await expect(controller.create(invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
-      await expect(controller.create(createModuleDto, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+    it('should throw ForbiddenException for STUDENT', async () => {
+      await expect(
+        controller.create(createModuleDto, mockAuthenticatedStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw NotFoundException if course not found', async () => {
       mockPrismaService.course.findUnique.mockResolvedValue(null);
 
-      await expect(controller.create(createModuleDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.create(createModuleDto, mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -189,10 +224,17 @@ describe('ModulesController', () => {
       mockPrismaService.module.findUnique.mockResolvedValue(mockModule);
       mockPrismaService.module.update.mockResolvedValue(updatedModule);
 
-      const result = await controller.update(mockModuleId, updateDto, mockAuthenticatedAdminRequest);
+      const result = await controller.update(
+        mockModuleId,
+        updateDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(updatedModule);
-      expect(mockPrismaService.module.update).toHaveBeenCalledWith({ where: { id: mockModuleId }, data: updateDto });
+      expect(mockPrismaService.module.update).toHaveBeenCalledWith({
+        where: { id: mockModuleId },
+        data: updateDto,
+      });
     });
 
     it('should update module for PROFESSOR', async () => {
@@ -200,31 +242,62 @@ describe('ModulesController', () => {
       mockPrismaService.module.findUnique.mockResolvedValue(mockModule);
       mockPrismaService.module.update.mockResolvedValue(updatedModule);
 
-      const result = await controller.update(mockModuleId, updateDto, mockAuthenticatedProfessorRequest);
+      const result = await controller.update(
+        mockModuleId,
+        updateDto,
+        mockAuthenticatedProfessorRequest,
+      );
 
       expect(result).toEqual(updatedModule);
-      expect(mockPrismaService.module.update).toHaveBeenCalledWith({ where: { id: mockModuleId }, data: updateDto });
+      expect(mockPrismaService.module.update).toHaveBeenCalledWith({
+        where: { id: mockModuleId },
+        data: updateDto,
+      });
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.module.findUnique.mockResolvedValue(mockModule);
 
-      await expect(controller.update(mockModuleId, updateDto, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.update(
+          mockModuleId,
+          updateDto,
+          mockAuthenticatedStudentRequest,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
-      await expect(controller.update('invalid-id', updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(
+          'invalid-id',
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = { title: '' };
-      await expect(controller.update(mockModuleId, invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(
+          mockModuleId,
+          invalidDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when module not found', async () => {
       mockPrismaService.module.findUnique.mockResolvedValue(null);
 
-      await expect(controller.update(randomUUID(), updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.update(
+          randomUUID(),
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -233,36 +306,52 @@ describe('ModulesController', () => {
       mockPrismaService.module.findUnique.mockResolvedValue(mockModule);
       mockPrismaService.module.delete.mockResolvedValue(mockModule);
 
-      const result = await controller.remove(mockModuleId, mockAuthenticatedAdminRequest);
+      const result = await controller.remove(
+        mockModuleId,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual({ message: 'Module deleted' });
-      expect(mockPrismaService.module.delete).toHaveBeenCalledWith({ where: { id: mockModuleId } });
+      expect(mockPrismaService.module.delete).toHaveBeenCalledWith({
+        where: { id: mockModuleId },
+      });
     });
 
     it('should delete module for PROFESSOR', async () => {
       mockPrismaService.module.findUnique.mockResolvedValue(mockModule);
       mockPrismaService.module.delete.mockResolvedValue(mockModule);
 
-      const result = await controller.remove(mockModuleId, mockAuthenticatedProfessorRequest);
+      const result = await controller.remove(
+        mockModuleId,
+        mockAuthenticatedProfessorRequest,
+      );
 
       expect(result).toEqual({ message: 'Module deleted' });
-      expect(mockPrismaService.module.delete).toHaveBeenCalledWith({ where: { id: mockModuleId } });
+      expect(mockPrismaService.module.delete).toHaveBeenCalledWith({
+        where: { id: mockModuleId },
+      });
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.module.findUnique.mockResolvedValue(mockModule);
 
-      await expect(controller.remove(mockModuleId, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.remove(mockModuleId, mockAuthenticatedStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
-      await expect(controller.remove('invalid-id', mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when module not found', async () => {
       mockPrismaService.module.findUnique.mockResolvedValue(null);
 
-      await expect(controller.remove(randomUUID(), mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.remove(randomUUID(), mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

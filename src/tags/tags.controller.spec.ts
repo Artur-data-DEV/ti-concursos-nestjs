@@ -4,7 +4,11 @@ import { TagsService } from './tags.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 describe('TagsController', () => {
   let controller: TagsController;
@@ -85,20 +89,29 @@ describe('TagsController', () => {
     it('should return tag by ID for any authenticated user', async () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(mockTag);
 
-      const result = await controller.findAll(mockAuthenticatedStudentRequest, mockTagId);
+      const result = await controller.findAll(
+        mockAuthenticatedStudentRequest,
+        mockTagId,
+      );
 
       expect(result).toEqual(mockTag);
-      expect(mockPrismaService.tag.findUnique).toHaveBeenCalledWith({ where: { id: mockTagId } });
+      expect(mockPrismaService.tag.findUnique).toHaveBeenCalledWith({
+        where: { id: mockTagId },
+      });
     });
 
     it('should throw BadRequestException for invalid tag ID', async () => {
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, 'invalid-id')).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.findAll(mockAuthenticatedStudentRequest, 'invalid-id'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when tag not found', async () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(null);
 
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, randomUUID())).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.findAll(mockAuthenticatedStudentRequest, randomUUID()),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should apply filters when provided', async () => {
@@ -118,13 +131,15 @@ describe('TagsController', () => {
         filters.offset,
       );
 
-      expect(mockPrismaService.tag.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: {
-          name: { contains: filters.name, mode: 'insensitive' },
-        },
-        take: 10,
-        skip: 0,
-      }));
+      expect(mockPrismaService.tag.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            name: { contains: filters.name, mode: 'insensitive' },
+          },
+          take: 10,
+          skip: 0,
+        }),
+      );
     });
   });
 
@@ -137,19 +152,28 @@ describe('TagsController', () => {
       const createdTag = { id: randomUUID(), ...createTagDto };
       mockPrismaService.tag.create.mockResolvedValue(createdTag);
 
-      const result = await controller.create(createTagDto, mockAuthenticatedAdminRequest);
+      const result = await controller.create(
+        createTagDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(createdTag);
-      expect(mockPrismaService.tag.create).toHaveBeenCalledWith({ data: createTagDto });
+      expect(mockPrismaService.tag.create).toHaveBeenCalledWith({
+        data: createTagDto,
+      });
     });
 
-    it("should throw BadRequestException for invalid data", async () => {
+    it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = { name: '' };
-      await expect(controller.create(invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw ForbiddenException for PROFESSOR", async () => {
-      await expect(controller.create(createTagDto, mockAuthenticatedProfessorRequest)).rejects.toThrow(ForbiddenException);
+    it('should throw ForbiddenException for PROFESSOR', async () => {
+      await expect(
+        controller.create(createTagDto, mockAuthenticatedProfessorRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -161,37 +185,70 @@ describe('TagsController', () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(mockTag);
       mockPrismaService.tag.update.mockResolvedValue(updatedTag);
 
-      const result = await controller.update(mockTagId, updateDto, mockAuthenticatedAdminRequest);
+      const result = await controller.update(
+        mockTagId,
+        updateDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(updatedTag);
-      expect(mockPrismaService.tag.update).toHaveBeenCalledWith({ where: { id: mockTagId }, data: updateDto });
+      expect(mockPrismaService.tag.update).toHaveBeenCalledWith({
+        where: { id: mockTagId },
+        data: updateDto,
+      });
     });
 
     it('should throw ForbiddenException for PROFESSOR', async () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(mockTag);
 
-      await expect(controller.update(mockTagId, updateDto, mockAuthenticatedProfessorRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.update(
+          mockTagId,
+          updateDto,
+          mockAuthenticatedProfessorRequest,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(mockTag);
 
-      await expect(controller.update(mockTagId, updateDto, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.update(
+          mockTagId,
+          updateDto,
+          mockAuthenticatedStudentRequest,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw BadRequestException for invalid data", async () => {
+    it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = { name: '' };
-      await expect(controller.update(mockTagId, invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.update(mockTagId, invalidDto, mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.update('invalid-id', updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid ID', async () => {
+      await expect(
+        controller.update(
+          'invalid-id',
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when tag not found', async () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(null);
 
-      await expect(controller.update(randomUUID(), updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.update(
+          randomUUID(),
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -200,32 +257,45 @@ describe('TagsController', () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(mockTag);
       mockPrismaService.tag.delete.mockResolvedValue(mockTag);
 
-      const result = await controller.remove(mockTagId, mockAuthenticatedAdminRequest);
+      const result = await controller.remove(
+        mockTagId,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual({ message: 'Tag deleted' });
-      expect(mockPrismaService.tag.delete).toHaveBeenCalledWith({ where: { id: mockTagId } });
+      expect(mockPrismaService.tag.delete).toHaveBeenCalledWith({
+        where: { id: mockTagId },
+      });
     });
 
     it('should throw ForbiddenException for PROFESSOR', async () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(mockTag);
 
-      await expect(controller.remove(mockTagId, mockAuthenticatedProfessorRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.remove(mockTagId, mockAuthenticatedProfessorRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(mockTag);
 
-      await expect(controller.remove(mockTagId, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.remove(mockTagId, mockAuthenticatedStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.remove("invalid-id", mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid ID', async () => {
+      await expect(
+        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when tag not found', async () => {
       mockPrismaService.tag.findUnique.mockResolvedValue(null);
 
-      await expect(controller.remove(randomUUID(), mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.remove(randomUUID(), mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

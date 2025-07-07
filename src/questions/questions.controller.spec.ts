@@ -4,7 +4,11 @@ import { QuestionsService } from './questions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 
 describe('QuestionsController', () => {
   let controller: QuestionsController;
@@ -93,20 +97,30 @@ describe('QuestionsController', () => {
     it('should return question by ID for any authenticated user', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
 
-      const result = await controller.findAll(mockAuthenticatedStudentRequest, mockQuestionId);
+      const result = await controller.findAll(
+        mockAuthenticatedStudentRequest,
+        mockQuestionId,
+      );
 
       expect(result).toEqual(mockQuestion);
-      expect(mockPrismaService.question.findUnique).toHaveBeenCalledWith({ where: { id: mockQuestionId }, include: { options: true, topic: true } });
+      expect(mockPrismaService.question.findUnique).toHaveBeenCalledWith({
+        where: { id: mockQuestionId },
+        include: { options: true, topic: true },
+      });
     });
 
     it('should throw BadRequestException for invalid question ID', async () => {
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, 'invalid-id')).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.findAll(mockAuthenticatedStudentRequest, 'invalid-id'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when question not found', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(null);
 
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, randomUUID())).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.findAll(mockAuthenticatedStudentRequest, randomUUID()),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should apply filters when provided', async () => {
@@ -131,13 +145,15 @@ describe('QuestionsController', () => {
         filters.offset,
       );
 
-      expect(mockPrismaService.question.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: {
-          topicId: filters.topicId,
-        },
-        take: 10,
-        skip: 0,
-      }));
+      expect(mockPrismaService.question.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            topicId: filters.topicId,
+          },
+          take: 10,
+          skip: 0,
+        }),
+      );
     });
   });
 
@@ -153,132 +169,212 @@ describe('QuestionsController', () => {
       ],
     };
 
-    it("should throw BadRequestException for invalid data", async () => {
-      const invalidDto = { ...createQuestionDto, text: "" };
-      await expect(controller.create(invalidDto, mockAuthenticatedProfessorRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid data', async () => {
+      const invalidDto = { ...createQuestionDto, text: '' };
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedProfessorRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should create question for PROFESSOR", async () => {
-      const createdQuestion = { id: randomUUID(), ...createQuestionDto, authorId: mockAuthorId };
+    it('should create question for PROFESSOR', async () => {
+      const createdQuestion = {
+        id: randomUUID(),
+        ...createQuestionDto,
+        authorId: mockAuthorId,
+      };
       mockPrismaService.question.create.mockResolvedValue(createdQuestion);
 
-      const result = await controller.create(createQuestionDto, mockAuthenticatedProfessorRequest);
+      const result = await controller.create(
+        createQuestionDto,
+        mockAuthenticatedProfessorRequest,
+      );
 
       expect(result).toEqual(createdQuestion);
-      expect(mockPrismaService.question.create).toHaveBeenCalledWith({ data: { ...createQuestionDto, authorId: mockAuthorId } });
+      expect(mockPrismaService.question.create).toHaveBeenCalledWith({
+        data: { ...createQuestionDto, authorId: mockAuthorId },
+      });
     });
 
     it('should create question for ADMIN', async () => {
-      const createdQuestion = { id: randomUUID(), ...createQuestionDto, authorId: mockAdminId };
+      const createdQuestion = {
+        id: randomUUID(),
+        ...createQuestionDto,
+        authorId: mockAdminId,
+      };
       mockPrismaService.question.create.mockResolvedValue(createdQuestion);
 
-      const result = await controller.create(createQuestionDto, mockAuthenticatedAdminRequest);
+      const result = await controller.create(
+        createQuestionDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(createdQuestion);
-      expect(mockPrismaService.question.create).toHaveBeenCalledWith({ data: { ...createQuestionDto, authorId: mockAdminId } });
+      expect(mockPrismaService.question.create).toHaveBeenCalledWith({
+        data: { ...createQuestionDto, authorId: mockAdminId },
+      });
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
-      await expect(controller.create(createQuestionDto, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.create(createQuestionDto, mockAuthenticatedStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = { ...createQuestionDto, text: '' };
-      await expect(controller.create(invalidDto, mockAuthenticatedProfessorRequest)).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedProfessorRequest),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
-  describe("update", () => {
-    const updateDto = { text: "Updated Question" };
+  describe('update', () => {
+    const updateDto = { text: 'Updated Question' };
 
-    it("should update question for ADMIN", async () => {
+    it('should update question for ADMIN', async () => {
       const updatedQuestion = { ...mockQuestion, ...updateDto };
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.update.mockResolvedValue(updatedQuestion);
 
-      const result = await controller.update(mockQuestionId, updateDto, mockAuthenticatedAdminRequest);
+      const result = await controller.update(
+        mockQuestionId,
+        updateDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(updatedQuestion);
-      expect(mockPrismaService.question.update).toHaveBeenCalledWith({ where: { id: mockQuestionId }, data: updateDto });
+      expect(mockPrismaService.question.update).toHaveBeenCalledWith({
+        where: { id: mockQuestionId },
+        data: updateDto,
+      });
     });
 
-    it("should update own question for PROFESSOR", async () => {
+    it('should update own question for PROFESSOR', async () => {
       const updatedQuestion = { ...mockQuestion, ...updateDto };
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.update.mockResolvedValue(updatedQuestion);
 
-      const result = await controller.update(mockQuestionId, updateDto, mockAuthenticatedProfessorRequest);
+      const result = await controller.update(
+        mockQuestionId,
+        updateDto,
+        mockAuthenticatedProfessorRequest,
+      );
 
       expect(result).toEqual(updatedQuestion);
-      expect(mockPrismaService.question.update).toHaveBeenCalledWith({ where: { id: mockQuestionId }, data: updateDto });
+      expect(mockPrismaService.question.update).toHaveBeenCalledWith({
+        where: { id: mockQuestionId },
+        data: updateDto,
+      });
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.update("invalid-id", updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid ID', async () => {
+      await expect(
+        controller.update(
+          'invalid-id',
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw NotFoundException when question not found", async () => {
+    it('should throw NotFoundException when question not found', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(null);
 
-      await expect(controller.update(randomUUID(), updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.update(
+          randomUUID(),
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw ForbiddenException for PROFESSOR updating other author question", async () => {
-      const otherProfessorRequest = { user: { sub: randomUUID(), role: "PROFESSOR" } } as AuthenticatedRequest;
+    it('should throw ForbiddenException for PROFESSOR updating other author question', async () => {
+      const otherProfessorRequest = {
+        user: { sub: randomUUID(), role: 'PROFESSOR' },
+      } as AuthenticatedRequest;
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
 
-      await expect(controller.update(mockQuestionId, updateDto, otherProfessorRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.update(mockQuestionId, updateDto, otherProfessorRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
+    it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
 
-      await expect(controller.update(mockQuestionId, updateDto, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.update(
+          mockQuestionId,
+          updateDto,
+          mockAuthenticatedStudentRequest,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe("remove", () => {
-    it("should delete question for ADMIN", async () => {
+  describe('remove', () => {
+    it('should delete question for ADMIN', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.delete.mockResolvedValue(mockQuestion);
 
-      const result = await controller.remove(mockQuestionId, mockAuthenticatedAdminRequest);
+      const result = await controller.remove(
+        mockQuestionId,
+        mockAuthenticatedAdminRequest,
+      );
 
-      expect(result).toEqual({ message: "Question deleted" });
-      expect(mockPrismaService.question.delete).toHaveBeenCalledWith({ where: { id: mockQuestionId } });
+      expect(result).toEqual({ message: 'Question deleted' });
+      expect(mockPrismaService.question.delete).toHaveBeenCalledWith({
+        where: { id: mockQuestionId },
+      });
     });
 
-    it("should delete own question for PROFESSOR", async () => {
+    it('should delete own question for PROFESSOR', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.delete.mockResolvedValue(mockQuestion);
 
-      const result = await controller.remove(mockQuestionId, mockAuthenticatedProfessorRequest);
+      const result = await controller.remove(
+        mockQuestionId,
+        mockAuthenticatedProfessorRequest,
+      );
 
-      expect(result).toEqual({ message: "Question deleted" });
-      expect(mockPrismaService.question.delete).toHaveBeenCalledWith({ where: { id: mockQuestionId } });
+      expect(result).toEqual({ message: 'Question deleted' });
+      expect(mockPrismaService.question.delete).toHaveBeenCalledWith({
+        where: { id: mockQuestionId },
+      });
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.remove("invalid-id", mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid ID', async () => {
+      await expect(
+        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw NotFoundException when question not found", async () => {
+    it('should throw NotFoundException when question not found', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(null);
 
-      await expect(controller.remove(randomUUID(), mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.remove(randomUUID(), mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw ForbiddenException for PROFESSOR deleting other author question", async () => {
-      const otherProfessorRequest = { user: { sub: randomUUID(), role: "PROFESSOR" } } as AuthenticatedRequest;
+    it('should throw ForbiddenException for PROFESSOR deleting other author question', async () => {
+      const otherProfessorRequest = {
+        user: { sub: randomUUID(), role: 'PROFESSOR' },
+      } as AuthenticatedRequest;
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
 
-      await expect(controller.remove(mockQuestionId, otherProfessorRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.remove(mockQuestionId, otherProfessorRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
+    it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
 
-      await expect(controller.remove(mockQuestionId, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      await expect(
+        controller.remove(mockQuestionId, mockAuthenticatedStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 });

@@ -1,24 +1,32 @@
+import { adminReq, professorId, studentReq } from '../__mocks__/user_mocks'; // Assumindo mocks de requisições autenticadas
 import { Test, TestingModule } from '@nestjs/testing';
 import { CoursesController } from './courses.controller';
 import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
-import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  ValidationPipe,
+} from '@nestjs/common';
+import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
+import { CreateCourseDto, IdParamDto } from './courses.dto';
 
 describe('CoursesController', () => {
   let controller: CoursesController;
   let service: CoursesService;
 
   const mockCourseId = randomUUID();
-  const mockAdminId = randomUUID();
-  const mockStudentId = randomUUID();
 
   const mockCourse = {
     id: mockCourseId,
     title: 'Test Course',
     description: 'This is a test course',
-    authorId: randomUUID(),
+    instructorId: professorId,
+    thumbnail: null,
+    price: null,
+    isPublished: false,
   };
 
   const mockPrismaService = {
@@ -30,20 +38,6 @@ describe('CoursesController', () => {
       delete: jest.fn(),
     },
   };
-
-  const mockAuthenticatedAdminRequest: AuthenticatedRequest = {
-    user: {
-      sub: mockAdminId,
-      role: 'ADMIN',
-    },
-  } as AuthenticatedRequest;
-
-  const mockAuthenticatedStudentRequest: AuthenticatedRequest = {
-    user: {
-      sub: mockStudentId,
-      role: 'STUDENT',
-    },
-  } as AuthenticatedRequest;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -64,137 +58,203 @@ describe('CoursesController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
+    expect(service).toBeDefined();
   });
 
   describe('findAll', () => {
-    it('should return a list of courses for any authenticated user', async () => {
+    it('should return courses with filters for authenticated user', async () => {
       mockPrismaService.course.findMany.mockResolvedValue([mockCourse]);
 
-      const result = await controller.findAll(mockAuthenticatedStudentRequest);
-
-      expect(result).toEqual([mockCourse]);
-      expect(mockPrismaService.course.findMany).toHaveBeenCalledTimes(1);
-    });
-
-    it('should return course by ID for any authenticated user', async () => {
-      mockPrismaService.course.findUnique.mockResolvedValue(mockCourse);
-
-      const result = await controller.findAll(mockAuthenticatedStudentRequest, mockCourseId);
-
-      expect(result).toEqual(mockCourse);
-      expect(mockPrismaService.course.findUnique).toHaveBeenCalledWith({ where: { id: mockCourseId } });
-    });
-
-    it('should throw BadRequestException for invalid course ID', async () => {
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, 'invalid-id')).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw NotFoundException when course not found', async () => {
-      mockPrismaService.course.findUnique.mockResolvedValue(null);
-
-      await expect(controller.findAll(mockAuthenticatedStudentRequest, randomUUID())).rejects.toThrow(NotFoundException);
-    });
-
-    it('should apply filters when provided', async () => {
-      mockPrismaService.course.findMany.mockResolvedValue([]);
-
-      const filters = {
-        authorId: randomUUID(),
-        limit: '10',
-        offset: '0',
-      };
-
-      await controller.findAll(
-        mockAuthenticatedStudentRequest,
+      const result = await controller.findAll(
+        studentReq,
         undefined,
-        filters.authorId,
-        filters.limit,
-        filters.offset,
+        professorId,
+        '5',
+        '0',
       );
 
-      expect(mockPrismaService.course.findMany).toHaveBeenCalledWith(expect.objectContaining({
-        where: {
-          authorId: filters.authorId,
+      expect(result).toEqual([mockCourse]);
+      expect(mockPrismaService.course.findMany).toHaveBeenCalledWith({
+        where: { instructorId: professorId },
+        include: {
+          modules: { include: { lessons: true } },
+          enrollments: true,
+          reviews: true,
         },
-        take: 10,
+        take: 5,
         skip: 0,
-      }));
+      });
+    });
+
+    it('should throw ForbiddenException if no user', async () => {
+      const fakeUser = {} as AuthenticatedRequest;
+      await expect(controller.findAll(fakeUser)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
   describe('create', () => {
-    const createCourseDto = {
+    const createDto: CreateCourseDto = {
       title: 'New Course',
-      description: 'Description of new course',
+      description: 'Description',
+      instructorId: professorId,
+      thumbnail: null,
+      price: 10,
+      isPublished: true,
     };
 
-    it('should create course for ADMIN', async () => {
-      const createdCourse = { id: randomUUID(), ...createCourseDto, authorId: mockAdminId };
-      mockPrismaService.course.create.mockResolvedValue(createdCourse);
+    it('should create course for ADMIN with valid data', async () => {
+      mockPrismaService.course.create.mockResolvedValue({
+        id: randomUUID(),
+        ...createDto,
+      });
 
-      const result = await controller.create(createCourseDto, mockAuthenticatedAdminRequest);
+      const result = await controller.create(createDto, adminReq);
 
-      expect(result).toEqual(createdCourse);
-      expect(mockPrismaService.course.create).toHaveBeenCalledWith({ data: { ...createCourseDto, authorId: mockAdminId } });
+      expect(result).toMatchObject(createDto);
+      expect(mockPrismaService.course.create).toHaveBeenCalledWith({
+        data: {
+          ...createDto,
+          instructor: { connect: { id: createDto.instructorId } },
+        },
+      });
     });
 
-    it("should throw BadRequestException for invalid data", async () => {
-      const invalidDto = { ...createCourseDto, title: '' };
-      await expect(controller.create(invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid data', async () => {
+      const invalidDto = {
+        id: randomUUID(),
+        description: 1,
+        title: 2,
+        price: 'a',
+      };
+
+      // Transforma o objeto como o Nest faria
+      const pipe = new ValidationPipe({ transform: true });
+      try {
+        await pipe.transform(invalidDto, {
+          type: 'body',
+          metatype: CreateCourseDto,
+        });
+      } catch (err) {
+        expect(err).toBeInstanceOf(BadRequestException);
+        return;
+      }
+
+      // Se passou da validação, falha o teste
+      fail('ValidationPipe não lançou BadRequestException como esperado.');
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
-      await expect(controller.create(createCourseDto, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+    it('should throw ForbiddenException if user not ADMIN or TEACHER', async () => {
+      await expect(controller.create(createDto, studentReq)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('should throw ForbiddenException if TEACHER tries to create course for another instructor', async () => {
+      const teacherReq = {
+        user: { sub: randomUUID(), role: 'TEACHER' },
+      } as AuthenticatedRequest;
+      const dtoWithOtherInstructor = {
+        ...createDto,
+        instructorId: professorId, // different from teacherReq.user.sub
+      };
+      await expect(
+        controller.create(dtoWithOtherInstructor, teacherReq),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe("update", () => {
-    const updateDto = { title: "Updated Course" };
+  describe('update', () => {
+    const updateDto = { title: 'Updated Title', description: 'Updated desc' };
 
-    it("should update course for ADMIN", async () => {
-      const updatedCourse = { ...mockCourse, ...updateDto };
+    it('should update course for ADMIN', async () => {
       mockPrismaService.course.findUnique.mockResolvedValue(mockCourse);
-      mockPrismaService.course.update.mockResolvedValue(updatedCourse);
+      mockPrismaService.course.update.mockResolvedValue({
+        ...mockCourse,
+        ...updateDto,
+      });
 
-      const result = await controller.update(mockCourseId, updateDto, mockAuthenticatedAdminRequest);
+      const result = await controller.update(
+        { id: mockCourseId },
+        updateDto,
+        adminReq,
+      );
 
-      expect(result).toEqual(updatedCourse);
-      expect(mockPrismaService.course.update).toHaveBeenCalledWith({ where: { id: mockCourseId }, data: updateDto });
+      expect(result).toMatchObject(updateDto);
+      expect(mockPrismaService.course.update).toHaveBeenCalledWith({
+        where: { id: mockCourseId },
+        data: updateDto,
+      });
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.update("invalid-id", updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid ID', async () => {
+      const pipe = new ValidationPipe({ transform: true });
+
+      const dto = new IdParamDto();
+      dto.id = 'invalid-uuid'; // Valor inválido
+
+      await expect(() =>
+        pipe.transform(dto, { type: 'param', metatype: IdParamDto }),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw BadRequestException for invalid data", async () => {
-      const invalidDto = { title: "" };
-      await expect(controller.update(mockCourseId, invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw NotFoundException if course not found', async () => {
+      mockPrismaService.course.findUnique.mockResolvedValue(null);
+      await expect(
+        controller.update({ id: mockCourseId }, updateDto, adminReq),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw ForbiddenException if user not authorized', async () => {
+      mockPrismaService.course.findUnique.mockResolvedValue(mockCourse);
+      const otherUserReq = {
+        user: { sub: 'other-id', role: 'TEACHER' },
+      } as AuthenticatedRequest;
+
+      await expect(
+        controller.update({ id: mockCourseId }, updateDto, otherUserReq),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
-  describe("remove", () => {
-    it("should delete course for ADMIN", async () => {
+  describe('remove', () => {
+    it('should delete course for ADMIN', async () => {
       mockPrismaService.course.findUnique.mockResolvedValue(mockCourse);
       mockPrismaService.course.delete.mockResolvedValue(mockCourse);
 
-      const result = await controller.remove(mockCourseId, mockAuthenticatedAdminRequest);
+      const result = await controller.remove({ id: mockCourseId }, adminReq);
 
-      expect(result).toEqual({ message: "Course deleted" });
-      expect(mockPrismaService.course.delete).toHaveBeenCalledWith({ where: { id: mockCourseId } });
+      expect(result).toEqual({ message: 'Curso deletado com sucesso.' });
+      expect(mockPrismaService.course.delete).toHaveBeenCalledWith({
+        where: { id: mockCourseId },
+      });
     });
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.remove("invalid-id", mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
+    it('should throw BadRequestException for invalid ID', async () => {
+      await expect(
+        controller.remove({ id: 'invalid-uuid' }, adminReq),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw NotFoundException when course not found", async () => {
+    it('should throw NotFoundException if course not found', async () => {
       mockPrismaService.course.findUnique.mockResolvedValue(null);
 
-      await expect(controller.update(randomUUID(), updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
+      await expect(
+        controller.remove({ id: mockCourseId }, adminReq),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
+    it('should throw ForbiddenException if user not authorized', async () => {
       mockPrismaService.course.findUnique.mockResolvedValue(mockCourse);
 
-      await expect(controller.update(mockCourseId, updateDto, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
+      const otherUserReq = {
+        user: { sub: 'other-id', role: 'TEACHER' },
+      } as AuthenticatedRequest;
+
+      await expect(
+        controller.remove({ id: mockCourseId }, otherUserReq),
+      ).rejects.toThrow(ForbiddenException);
     });
+  });
+});

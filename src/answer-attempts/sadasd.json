@@ -1,2 +1,0 @@
-{"include": {"answer": true}, "orderBy": {"attemptAt": "desc"}, "skip": 0, "take": 5, "where": {"isCorrect": "true", "questionId": "question-id", "userId": "c0ef2121-dc9d-41b6-a90b-d683e047a28e"}}
-{"include": {"answer": true}, "orderBy": {"attemptAt": "desc"}, "skip": 0, "take": 5, "where": {"answer": {"questionId": "question-id", "userId": "c0ef2121-dc9d-41b6-a90b-d683e047a28e"}, "isCorrect": true}}
