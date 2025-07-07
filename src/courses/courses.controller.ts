@@ -12,6 +12,7 @@ import {
   ForbiddenException,
   NotFoundException,
   BadRequestException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
@@ -20,7 +21,7 @@ import { Roles } from '../auth/roles.decorator/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
-import { CreateCourseDto, IdParamDto, UpdateCourseDto } from './courses.dto';
+import { CreateCourseDto, UpdateCourseDto } from './courses.dto';
 import { isUUID } from 'class-validator';
 
 @Controller('courses')
@@ -73,7 +74,7 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async update(
-    @Param('id') params: IdParamDto,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() body: UpdateCourseDto,
     @Request() req: AuthenticatedRequest,
   ) {
@@ -85,7 +86,7 @@ export class CoursesController {
 
     const data = body;
 
-    const existingCourse = await this.coursesService.findOne(params.id);
+    const existingCourse = await this.coursesService.findOne(id);
     if (!existingCourse) {
       throw new NotFoundException('Curso não encontrado para atualização.');
     }
@@ -98,7 +99,7 @@ export class CoursesController {
     }
 
     try {
-      return await this.coursesService.update(params.id, data);
+      return await this.coursesService.update(id, data);
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -113,10 +114,10 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async remove(
-    @Param('id') params: IdParamDto,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!isUUID(params.id)) {
+    if (!isUUID(id)) {
       throw new BadRequestException('ID inválido.');
     }
     const user = req.user;
@@ -125,7 +126,7 @@ export class CoursesController {
       throw new ForbiddenException('Não autenticado.');
     }
 
-    const existingCourse = await this.coursesService.findOne(params.id);
+    const existingCourse = await this.coursesService.findOne(id);
 
     if (!existingCourse) {
       throw new NotFoundException('Curso não encontrado para exclusão.');
@@ -136,7 +137,7 @@ export class CoursesController {
     }
 
     try {
-      await this.coursesService.remove(params.id);
+      await this.coursesService.remove(id);
       return { message: 'Curso deletado com sucesso.' };
     } catch (error) {
       if (

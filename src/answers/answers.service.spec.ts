@@ -1,29 +1,15 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnswersService } from './answers.service';
 import { randomUUID } from 'crypto';
 import { CreateAnswerDto } from './answers.dto';
+import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { Answer } from '@prisma/client';
 
 describe('AnswersService', () => {
   let service: AnswersService;
-
-  const mockPrisma: {
-    answer: {
-      create: jest.Mock;
-      findUnique: jest.Mock;
-      update: jest.Mock;
-      delete: jest.Mock;
-      findMany: jest.Mock;
-    };
-  } = {
-    answer: {
-      create: jest.fn(),
-      findUnique: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      findMany: jest.fn(),
-    },
-  };
+  let prismaService: DeepMockProxy<PrismaService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -31,13 +17,17 @@ describe('AnswersService', () => {
         AnswersService,
         {
           provide: PrismaService,
-          useValue: mockPrisma, // Injeta o mock do PrismaService
+          useValue: mockDeep<PrismaService>(),
         },
       ],
     }).compile();
 
     service = module.get<AnswersService>(AnswersService);
-    jest.clearAllMocks(); // Limpa todos os mocks para garantir que os testes sejam independentes
+    prismaService = module.get<PrismaService, DeepMockProxy<PrismaService>>(
+      PrismaService,
+    );
+
+    jest.clearAllMocks();
   });
 
   describe('create', () => {
@@ -48,22 +38,20 @@ describe('AnswersService', () => {
         selectedOption: 'A',
       };
 
-      const createdAnswer = { id: randomUUID(), ...data };
-      mockPrisma.answer.create.mockResolvedValue(createdAnswer); // Mocka o retorno da criação
+      const createdAnswer = { id: randomUUID(), ...data } as Answer;
+      prismaService.answer.create.mockResolvedValue(createdAnswer);
 
-      const result = await service.create(data); // Chama o método que deve usar o Prisma
+      const result = await service.create(data);
 
-      // Verifica se a função create do Prisma foi chamada corretamente
-      expect(mockPrisma.answer.create).toHaveBeenCalledWith({ data });
-      expect(result).toEqual(createdAnswer); // Verifica se o retorno está correto
+      expect(prismaService.answer.create).toHaveBeenCalledWith({ data });
+      expect(result).toEqual(createdAnswer);
     });
 
     it('should throw if prisma.create fails', async () => {
-      mockPrisma.answer.create.mockRejectedValue(
+      prismaService.answer.create.mockRejectedValue(
         new Error('Prisma create error'),
-      ); // Mocka falha
+      );
 
-      // Verifica se o erro é lançado corretamente quando o Prisma falha
       await expect(
         service.create({
           userId: 'x',
@@ -77,23 +65,23 @@ describe('AnswersService', () => {
   describe('findOne', () => {
     it('should return answer by id', async () => {
       const id = 'answer-id';
-      const answer = { id, userId: 'uuid', questionId: 'uuid' };
-      mockPrisma.answer.findUnique.mockResolvedValue(answer); // Mocka a busca no Prisma
+      const answer = { id, userId: 'uuid', questionId: 'uuid' } as Answer;
+      prismaService.answer.findUnique.mockResolvedValue(answer);
 
-      const result = await service.findOne(id); // Chama o método que deve usar o Prisma
+      const result = await service.findOne(id);
 
-      expect(mockPrisma.answer.findUnique).toHaveBeenCalledWith({
+      expect(prismaService.answer.findUnique).toHaveBeenCalledWith({
         where: { id },
       });
-      expect(result).toEqual(answer); // Verifica se o retorno está correto
+      expect(result).toEqual(answer);
     });
 
     it('should return null if not found', async () => {
-      mockPrisma.answer.findUnique.mockResolvedValue(null); // Mocka a não existência da resposta
+      prismaService.answer.findUnique.mockResolvedValue(null);
 
-      const result = await service.findOne('not-exist'); // Chama com id inexistente
+      const result = await service.findOne('not-exist');
 
-      expect(result).toBeNull(); // Verifica se o resultado é null
+      expect(result).toBeNull();
     });
   });
 });

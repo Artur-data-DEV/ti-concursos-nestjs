@@ -224,7 +224,7 @@ describe('QuestionsController', () => {
   describe('update', () => {
     const updateDto = { text: 'Updated Question' };
 
-    it("should throw BadRequestException for invalid ID", async () => {
+    it('should throw BadRequestException for invalid ID', async () => {
       await expect(
         controller.update(
           'invalid-id',
@@ -234,7 +234,7 @@ describe('QuestionsController', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw NotFoundException when question not found", async () => {
+    it('should throw NotFoundException when question not found', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(null);
 
       await expect(
@@ -246,7 +246,7 @@ describe('QuestionsController', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw ForbiddenException for PROFESSOR updating other author question", async () => {
+    it('should throw ForbiddenException for PROFESSOR updating other author question', async () => {
       const otherProfessorRequest = {
         user: { sub: randomUUID(), role: 'PROFESSOR' },
       } as AuthenticatedRequest;
@@ -257,7 +257,7 @@ describe('QuestionsController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
+    it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
 
       await expect(
@@ -269,7 +269,7 @@ describe('QuestionsController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should update question for ADMIN", async () => {
+    it('should update question for ADMIN', async () => {
       const updatedQuestion = { ...mockQuestion, ...updateDto };
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.update.mockResolvedValue(updatedQuestion);
@@ -287,7 +287,7 @@ describe('QuestionsController', () => {
       });
     });
 
-    it("should update own question for PROFESSOR", async () => {
+    it('should update own question for PROFESSOR', async () => {
       const updatedQuestion = { ...mockQuestion, ...updateDto };
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.update.mockResolvedValue(updatedQuestion);
@@ -307,13 +307,13 @@ describe('QuestionsController', () => {
   });
 
   describe('remove', () => {
-    it("should throw BadRequestException for invalid ID", async () => {
+    it('should throw BadRequestException for invalid ID', async () => {
       await expect(
-        controller.remove("invalid-id", mockAuthenticatedAdminRequest),
+        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw NotFoundException when question not found", async () => {
+    it('should throw NotFoundException when question not found', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(null);
 
       await expect(
@@ -321,7 +321,7 @@ describe('QuestionsController', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should throw ForbiddenException for PROFESSOR deleting other author question", async () => {
+    it('should throw ForbiddenException for PROFESSOR deleting other author question', async () => {
       const otherProfessorRequest = {
         user: { sub: randomUUID(), role: 'PROFESSOR' },
       } as AuthenticatedRequest;
@@ -332,7 +332,7 @@ describe('QuestionsController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
+    it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
 
       await expect(
@@ -340,7 +340,7 @@ describe('QuestionsController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should delete question for ADMIN", async () => {
+    it('should delete question for ADMIN', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.delete.mockResolvedValue(mockQuestion);
 
@@ -355,7 +355,7 @@ describe('QuestionsController', () => {
       });
     });
 
-    it("should delete own question for PROFESSOR", async () => {
+    it('should delete own question for PROFESSOR', async () => {
       mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
       mockPrismaService.question.delete.mockResolvedValue(mockQuestion);
 

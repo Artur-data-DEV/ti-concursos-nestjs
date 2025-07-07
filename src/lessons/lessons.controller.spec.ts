@@ -149,27 +149,30 @@ describe('LessonsController', () => {
       order: 2,
     };
 
-    it("should throw BadRequestException for invalid data", async () => {
-      const invalidDto = { ...createLessonDto, title: "" };
-      await expect(controller.create(invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(
-        BadRequestException,
-      );
+    it('should throw BadRequestException for invalid data', async () => {
+      const invalidDto = { ...createLessonDto, title: '' };
+      await expect(
+        controller.create(invalidDto, mockAuthenticatedAdminRequest),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
-      await expect(controller.create(createLessonDto, mockAuthenticatedStudentRequest)).rejects.toThrow(
-        ForbiddenException,
-      );
+    it('should throw ForbiddenException for STUDENT', async () => {
+      await expect(
+        controller.create(createLessonDto, mockAuthenticatedStudentRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should create lesson for ADMIN", async () => {
+    it('should create lesson for ADMIN', async () => {
       const createdLesson = { id: randomUUID(), ...createLessonDto };
       mockPrismaService.module.findUnique.mockResolvedValue({
         id: mockModuleId,
       });
       mockPrismaService.lesson.create.mockResolvedValue(createdLesson);
 
-      const result = await controller.create(createLessonDto, mockAuthenticatedAdminRequest);
+      const result = await controller.create(
+        createLessonDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(createdLesson);
       expect(mockPrismaService.lesson.create).toHaveBeenCalledWith({
@@ -177,14 +180,17 @@ describe('LessonsController', () => {
       });
     });
 
-    it("should create lesson for PROFESSOR", async () => {
+    it('should create lesson for PROFESSOR', async () => {
       const createdLesson = { id: randomUUID(), ...createLessonDto };
       mockPrismaService.module.findUnique.mockResolvedValue({
         id: mockModuleId,
       });
       mockPrismaService.lesson.create.mockResolvedValue(createdLesson);
 
-      const result = await controller.create(createLessonDto, mockAuthenticatedProfessorRequest);
+      const result = await controller.create(
+        createLessonDto,
+        mockAuthenticatedProfessorRequest,
+      );
 
       expect(result).toEqual(createdLesson);
       expect(mockPrismaService.lesson.create).toHaveBeenCalledWith({
@@ -204,33 +210,49 @@ describe('LessonsController', () => {
   describe('update', () => {
     const updateDto = { title: 'Updated Lesson' };
 
-    it("should throw BadRequestException for invalid ID", async () => {
-      await expect(controller.update("invalid-id", updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(
-        BadRequestException,
-      );
+    it('should throw BadRequestException for invalid ID', async () => {
+      await expect(
+        controller.update(
+          'invalid-id',
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw BadRequestException for invalid data", async () => {
-      const invalidDto = { title: "" };
-      await expect(controller.update(mockLessonId, invalidDto, mockAuthenticatedAdminRequest)).rejects.toThrow(
-        BadRequestException,
-      );
+    it('should throw BadRequestException for invalid data', async () => {
+      const invalidDto = { title: '' };
+      await expect(
+        controller.update(
+          mockLessonId,
+          invalidDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
+    it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.lesson.findUnique.mockResolvedValue(mockLesson);
 
-      await expect(controller.update(mockLessonId, updateDto, mockAuthenticatedStudentRequest)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        controller.update(
+          mockLessonId,
+          updateDto,
+          mockAuthenticatedStudentRequest,
+        ),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should update lesson for ADMIN", async () => {
+    it('should update lesson for ADMIN', async () => {
       const updatedLesson = { ...mockLesson, ...updateDto };
       mockPrismaService.lesson.findUnique.mockResolvedValue(mockLesson);
       mockPrismaService.lesson.update.mockResolvedValue(updatedLesson);
 
-      const result = await controller.update(mockLessonId, updateDto, mockAuthenticatedAdminRequest);
+      const result = await controller.update(
+        mockLessonId,
+        updateDto,
+        mockAuthenticatedAdminRequest,
+      );
 
       expect(result).toEqual(updatedLesson);
       expect(mockPrismaService.lesson.update).toHaveBeenCalledWith({
@@ -239,12 +261,16 @@ describe('LessonsController', () => {
       });
     });
 
-    it("should update lesson for PROFESSOR", async () => {
+    it('should update lesson for PROFESSOR', async () => {
       const updatedLesson = { ...mockLesson, ...updateDto };
       mockPrismaService.lesson.findUnique.mockResolvedValue(mockLesson);
       mockPrismaService.lesson.update.mockResolvedValue(updatedLesson);
 
-      const result = await controller.update(mockLessonId, updateDto, mockAuthenticatedProfessorRequest);
+      const result = await controller.update(
+        mockLessonId,
+        updateDto,
+        mockAuthenticatedProfessorRequest,
+      );
 
       expect(result).toEqual(updatedLesson);
       expect(mockPrismaService.lesson.update).toHaveBeenCalledWith({
@@ -267,13 +293,13 @@ describe('LessonsController', () => {
   });
 
   describe('remove', () => {
-    it("should throw BadRequestException for invalid ID", async () => {
+    it('should throw BadRequestException for invalid ID', async () => {
       await expect(
-        controller.remove("invalid-id", mockAuthenticatedAdminRequest),
+        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("should throw ForbiddenException for STUDENT", async () => {
+    it('should throw ForbiddenException for STUDENT', async () => {
       mockPrismaService.lesson.findUnique.mockResolvedValue(mockLesson);
 
       await expect(
@@ -281,7 +307,7 @@ describe('LessonsController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should throw NotFoundException when lesson not found", async () => {
+    it('should throw NotFoundException when lesson not found', async () => {
       mockPrismaService.lesson.findUnique.mockResolvedValue(null);
 
       await expect(
@@ -289,25 +315,31 @@ describe('LessonsController', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it("should delete lesson for ADMIN", async () => {
+    it('should delete lesson for ADMIN', async () => {
       mockPrismaService.lesson.findUnique.mockResolvedValue(mockLesson);
       mockPrismaService.lesson.delete.mockResolvedValue(mockLesson);
 
-      const result = await controller.remove(mockLessonId, mockAuthenticatedAdminRequest);
+      const result = await controller.remove(
+        mockLessonId,
+        mockAuthenticatedAdminRequest,
+      );
 
-      expect(result).toEqual({ message: "Lesson deleted" });
+      expect(result).toEqual({ message: 'Lesson deleted' });
       expect(mockPrismaService.lesson.delete).toHaveBeenCalledWith({
         where: { id: mockLessonId },
       });
     });
 
-    it("should delete lesson for PROFESSOR", async () => {
+    it('should delete lesson for PROFESSOR', async () => {
       mockPrismaService.lesson.findUnique.mockResolvedValue(mockLesson);
       mockPrismaService.lesson.delete.mockResolvedValue(mockLesson);
 
-      const result = await controller.remove(mockLessonId, mockAuthenticatedProfessorRequest);
+      const result = await controller.remove(
+        mockLessonId,
+        mockAuthenticatedProfessorRequest,
+      );
 
-      expect(result).toEqual({ message: "Lesson deleted" });
+      expect(result).toEqual({ message: 'Lesson deleted' });
       expect(mockPrismaService.lesson.delete).toHaveBeenCalledWith({
         where: { id: mockLessonId },
       });

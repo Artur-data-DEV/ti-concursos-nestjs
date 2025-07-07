@@ -154,12 +154,12 @@ describe('UsersController', () => {
       role: 'STUDENT',
     };
 
-    it("should throw BadRequestException for invalid data", async () => {
+    it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = {
-        name: "",
-        email: "invalid-email",
-        password: "123",
-        role: "INVALID_ROLE",
+        name: '',
+        email: 'invalid-email',
+        password: '123',
+        role: 'INVALID_ROLE',
       };
 
       await expect(controller.create(invalidDto)).rejects.toThrow(
@@ -167,7 +167,7 @@ describe('UsersController', () => {
       );
     });
 
-    it("should create user for ADMIN", async () => {
+    it('should create user for ADMIN', async () => {
       const createdUser = { id: randomUUID(), ...createUserDto };
       mockPrismaService.user.create.mockResolvedValue(createdUser);
 

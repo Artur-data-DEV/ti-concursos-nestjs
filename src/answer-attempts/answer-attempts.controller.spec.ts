@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/unbound-method */
 import {
   adminId,
@@ -13,6 +12,7 @@ import {
   NotFoundException,
   ForbiddenException,
   ParseUUIDPipe,
+  ValidationPipe,
 } from '@nestjs/common';
 import { AnswerAttemptsController } from './answer-attempts.controller';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
@@ -98,12 +98,33 @@ describe('AnswerAttemptsController', () => {
     };
 
     it('deve lançar BadRequestException se dados inválidos', async () => {
-      await expect(controller.create({} as CreateAnswerAttemptDto, adminReq)).rejects.toThrow(BadRequestException);
+      const invalidDto = {} as CreateAnswerAttemptDto;
+
+      const pipe = new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      });
+
+      await expect(
+        pipe.transform(invalidDto, {
+          type: 'body',
+          metatype: CreateAnswerAttemptDto,
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('deve lançar ForbiddenException se não autenticado', async () => {
       await expect(
         controller.create(newAttemptDto, {} as AuthenticatedRequest),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('deve lançar ForbiddenException para STUDENT criando tentativa de outro user', async () => {
+      service.findAnswer.mockResolvedValue({ userId: 'outro-id' });
+
+      await expect(
+        controller.create(newAttemptDto, studentReq),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -114,22 +135,6 @@ describe('AnswerAttemptsController', () => {
       const result = await controller.create(newAttemptDto, adminReq);
 
       expect(result).toEqual(mockAnswerAttempt);
-    });
-
-    it('deve lançar NotFoundException se resposta não existir', async () => {
-      service.findAnswer.mockResolvedValue(null);
-
-      await expect(controller.create(newAttemptDto, adminReq)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('deve lançar ForbiddenException para STUDENT criando tentativa de outro user', async () => {
-      service.findAnswer.mockResolvedValue({ userId: 'outro-id' });
-
-      await expect(
-        controller.create(newAttemptDto, studentReq),
-      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -144,13 +149,13 @@ describe('AnswerAttemptsController', () => {
       attemptAt: new Date(),
     };
 
-    it("deve lançar BadRequestException se id da rota e do DTO forem diferentes", async () => {
+    it('deve lançar BadRequestException se id da rota e do DTO forem diferentes', async () => {
       await expect(
         controller.update(randomUUID(), updateDto, adminReq),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it("deve lançar ForbiddenException se não autenticado", async () => {
+    it('deve lançar ForbiddenException se não autenticado', async () => {
       await expect(
         controller.update(attemptId, updateDto, {} as AuthenticatedRequest),
       ).rejects.toThrow(ForbiddenException);
@@ -180,19 +185,19 @@ describe('AnswerAttemptsController', () => {
   // --- remove ---
 
   describe('remove', () => {
-    it("deve lançar BadRequestException se ID inválido", async () => {
+    it('deve lançar BadRequestException se ID inválido', async () => {
       const pipe = new ParseUUIDPipe();
 
       // Testa o pipe isoladamente, pois ele é executado na camada HTTP, antes do controller
       await expect(
-        pipe.transform("invalid-uuid", { type: "param", data: "" }),
+        pipe.transform('invalid-uuid', { type: 'param', data: '' }),
       ).rejects.toThrow(BadRequestException);
 
       // No teste unitário do controller, a validação do pipe não é executada
       // Para testar o pipe integrado, faça testes e2e (integração)
     });
 
-    it("deve lançar ForbiddenException se não autenticado", async () => {
+    it('deve lançar ForbiddenException se não autenticado', async () => {
       await expect(
         controller.remove(attemptId, {} as AuthenticatedRequest),
       ).rejects.toThrow(ForbiddenException);

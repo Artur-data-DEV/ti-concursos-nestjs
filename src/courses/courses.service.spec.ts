@@ -24,18 +24,22 @@ describe('CoursesService', () => {
     prismaService = module.get(PrismaService);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
+  afterEach(() => jest.clearAllMocks());
 
   describe('findAll', () => {
-    it('should call prisma.course.findMany with correct filters', async () => {
+    it('should return filtered courses with relations', async () => {
       const mockCourses: Course[] = [
-        { id: '1', title: 'Test', instructorId: 'abc' } as Course,
+        {
+          id: '1',
+          title: 'Test',
+          description: 'Descrição do curso',
+          instructorId: 'abc',
+          thumbnail: null,
+          price: 0,
+          isPublished: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       ];
 
       prismaService.course.findMany.mockResolvedValue(mockCourses);
@@ -55,6 +59,25 @@ describe('CoursesService', () => {
         take: 10,
         skip: 0,
         include: {
+          modules: { include: { lessons: true } },
+          enrollments: true,
+          reviews: true,
+        },
+      });
+
+      expect(result).toEqual(mockCourses);
+    });
+
+    it('should handle empty filters', async () => {
+      prismaService.course.findMany.mockResolvedValue([]);
+
+      const result = await service.findAll({});
+
+      expect(prismaService.course.findMany).toHaveBeenCalledWith({
+        where: {},
+        take: undefined,
+        skip: undefined,
+        include: {
           modules: {
             include: {
               lessons: true,
@@ -65,54 +88,86 @@ describe('CoursesService', () => {
         },
       });
 
-      expect(result).toEqual(mockCourses);
+      expect(result).toEqual([]);
     });
   });
 
-  // Faça o mesmo para os outros métodos: findOne, create, update, remove
-
   describe('findOne', () => {
-    it('should call prisma.course.findUnique with correct id', async () => {
-      const mockCourse = { id: '1', instructorId: 'abc' };
-      prismaService.course.findUnique.mockResolvedValue(mockCourse as any);
+    it('should return a course by id', async () => {
+      const mockCourse = { id: '1', instructorId: 'abc' } as Course;
+      prismaService.course.findUnique.mockResolvedValue(mockCourse);
 
       const result = await service.findOne('1');
 
       expect(prismaService.course.findUnique).toHaveBeenCalledWith({
         where: { id: '1' },
-        select: {
-          id: true,
-          instructorId: true,
-        },
+        select: { id: true, instructorId: true },
       });
+
       expect(result).toEqual(mockCourse);
+    });
+
+    it('should return null when course not found', async () => {
+      prismaService.course.findUnique.mockResolvedValue(null);
+
+      const result = await service.findOne('not-exist');
+
+      expect(result).toBeNull();
     });
   });
 
   describe('create', () => {
-    it('should call prisma.course.create with correct data', async () => {
-      const newCourse = {
-        title: 'Test Course',
-        description: 'A course',
-        instructor: { connect: { id: 'abc' } },
-      };
+    const inputData = {
+      title: 'Course',
+      description: 'Desc',
+      instructor: { connect: { id: 'abc' } },
+    };
 
-      const createdCourse = { ...newCourse, id: '1' };
-      prismaService.course.create.mockResolvedValue(createdCourse as any);
+    const createdCourse: Course = {
+      id: '1',
+      title: 'Course',
+      description: 'Desc',
+      instructorId: 'abc',
+      thumbnail: null,
+      price: null,
+      isPublished: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-      const result = await service.create(newCourse as any);
+    it('should create a course', async () => {
+      prismaService.course.create.mockResolvedValue(createdCourse);
+
+      const result = await service.create(inputData);
 
       expect(prismaService.course.create).toHaveBeenCalledWith({
-        data: newCourse,
+        data: inputData,
       });
       expect(result).toEqual(createdCourse);
+    });
+
+    it('should throw if prisma.create fails', async () => {
+      prismaService.course.create.mockRejectedValue(new Error('DB error'));
+
+      await expect(service.create(inputData)).rejects.toThrow('DB error');
     });
   });
 
   describe('update', () => {
-    it('should call prisma.course.update with correct id and data', async () => {
-      const updatedCourse = { id: '1', title: 'Updated', instructorId: 'abc' };
-      prismaService.course.update.mockResolvedValue(updatedCourse as any);
+    it('should update a course', async () => {
+      const updated: Course = {
+        id: '1',
+        title: 'Updated',
+        instructorId: 'abc',
+        description: '',
+        thumbnail: null,
+        price: null,
+        isPublished: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      prismaService.course.update.mockResolvedValue(updated);
 
       const result = await service.update('1', { title: 'Updated' });
 
@@ -120,21 +175,39 @@ describe('CoursesService', () => {
         where: { id: '1' },
         data: { title: 'Updated' },
       });
-      expect(result).toEqual(updatedCourse);
+      expect(result).toEqual(updated);
+    });
+
+    it('should throw on update failure', async () => {
+      prismaService.course.update.mockRejectedValue(new Error('Update failed'));
+
+      await expect(service.update('1', { title: 'Fail' })).rejects.toThrow(
+        'Update failed',
+      );
     });
   });
 
   describe('remove', () => {
-    it('should call prisma.course.delete with correct id', async () => {
-      const deletedCourse = { id: '1', title: 'Deleted', instructorId: 'abc' };
-      prismaService.course.delete.mockResolvedValue(deletedCourse as any);
+    it('should delete a course', async () => {
+      const deleted = {
+        id: '1',
+        title: 'Deleted',
+        instructorId: 'abc',
+      } as Course;
+      prismaService.course.delete.mockResolvedValue(deleted);
 
       const result = await service.remove('1');
 
       expect(prismaService.course.delete).toHaveBeenCalledWith({
         where: { id: '1' },
       });
-      expect(result).toEqual(deletedCourse);
+      expect(result).toEqual(deleted);
+    });
+
+    it('should throw if delete fails', async () => {
+      prismaService.course.delete.mockRejectedValue(new Error('Delete error'));
+
+      await expect(service.remove('1')).rejects.toThrow('Delete error');
     });
   });
 });

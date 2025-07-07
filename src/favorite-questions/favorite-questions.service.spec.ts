@@ -3,13 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { FavoriteQuestionsService } from './favorite-questions.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import {
-  FavoriteQuestion,
-  Question,
-  User,
-  Prisma,
-
-} from '@prisma/client';
+import { FavoriteQuestion, Question, User, Prisma } from '@prisma/client';
 
 describe('FavoriteQuestionsService', () => {
   let service: FavoriteQuestionsService;

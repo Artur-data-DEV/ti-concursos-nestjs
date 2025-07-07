@@ -34,8 +34,3 @@ export class CreateCourseDto {
 }
 
 export class UpdateCourseDto extends PartialType(CreateCourseDto) {}
-
-export class IdParamDto {
-  @IsUUID('4', { message: 'O ID deve ser um UUID válido.' })
-  id!: string;
-}
