@@ -8,17 +8,13 @@ import {
   Delete,
   UseGuards,
   Request,
-  ForbiddenException,
-  NotFoundException,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import { EnrollmentsService } from './enrollments.service';
+import { Prisma } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard/roles.guard';
 import { Roles } from '../auth/roles.decorator/roles.decorator';
-import { UserRole, EnrollmentStatus } from '@prisma/client';
-import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
-import { CreateEnrollmentDto, UpdateEnrollmentDto } from './enrollments.dto';
+import { UserRole } from '@prisma/client';
 
 @Controller('enrollments')
 export class EnrollmentsController {
@@ -27,87 +23,44 @@ export class EnrollmentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Post()
-  async create(
-    @Body() createEnrollmentDto: CreateEnrollmentDto,
-    @Request() req: AuthenticatedRequest,
-  ) {
-    if (req.user.role !== UserRole.ADMIN) {
-      throw new ForbiddenException(
-        'No momento somente administradores podem criar inscrições',
-      );
-    }
-    console.log(
-      `Admin ${req.user.sub} criando matrícula para usuário ${createEnrollmentDto.userId}`,
-    );
-
-    const data = {
-      userId: createEnrollmentDto.userId,
-      courseId: createEnrollmentDto.courseId,
-      status: createEnrollmentDto.status || EnrollmentStatus.ACTIVE,
-    };
-    return this.enrollmentsService.create(data);
+  create(@Body() createEnrollmentDto: Prisma.EnrollmentCreateInput) {
+    return this.enrollmentsService.create(createEnrollmentDto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STUDENT)
   @Get()
-  async findAll(@Request() req: AuthenticatedRequest) {
+  findAll(@Request() req: any) {
     if (req.user.role === UserRole.ADMIN) {
       return this.enrollmentsService.findAll();
     } else if (req.user.role === UserRole.STUDENT) {
-      return this.enrollmentsService.findManyByUserId(req.user.sub);
+      return this.enrollmentsService.findManyByUserId(req.user.userId);
+    } else {
+      return [];
     }
-    return [];
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STUDENT)
   @Get(':id')
-  async findOne(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Request() req: AuthenticatedRequest,
-  ) {
-    const enrollment = await this.enrollmentsService.findOne(id);
-
-    if (!enrollment) {
-      throw new NotFoundException('Matrícula não encontrada');
-    }
-
-    if (
-      req.user.role === UserRole.STUDENT &&
-      enrollment.userId !== req.user.sub
-    ) {
-      throw new ForbiddenException('Acesso negado');
-    }
-
-    return enrollment;
+  findOne(@Param('id') id: string) {
+    return this.enrollmentsService.findOne(id);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Patch(':id')
-  async update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateEnrollmentDto: UpdateEnrollmentDto,
+  update(
+    @Param('id') id: string,
+    @Body() updateEnrollmentDto: Prisma.EnrollmentUpdateInput,
   ) {
-    const updated = await this.enrollmentsService.update(
-      id,
-      updateEnrollmentDto,
-    );
-    if (!updated) {
-      throw new NotFoundException('Matrícula não encontrada');
-    }
-    return updated;
+    return this.enrollmentsService.update(id, updateEnrollmentDto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @Delete(':id')
-  async remove(@Param('id', ParseUUIDPipe) id: string) {
-    const removed = await this.enrollmentsService.remove(id);
-    if (!removed) {
-      throw new NotFoundException('Matrícula não encontrada');
-    }
-    return removed;
+  remove(@Param('id') id: string) {
+    return this.enrollmentsService.remove(id);
   }
 }

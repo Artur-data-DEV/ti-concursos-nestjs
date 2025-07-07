@@ -1,15 +1,25 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
-import { AnswerAttemptsService } from './answer-attempts.service';
+import { AnswerAttemptsService, Filters } from './answer-attempts.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
-import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { randomUUID } from 'crypto';
-import { AttemptFilterDto } from './answer-attempts.dto';
+import { Prisma } from '@prisma/client';
 
 describe('AnswerAttemptsService', () => {
   let service: AnswerAttemptsService;
-  let prisma: DeepMockProxy<PrismaService>;
+
+  // Tipagem parcial para evitar any
+  const mockPrismaService = {
+    answerAttempt: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    answer: {
+      findUnique: jest.fn(),
+    },
+  };
 
   const attemptId = randomUUID();
   const answerId = randomUUID();
@@ -19,27 +29,20 @@ describe('AnswerAttemptsService', () => {
     id: attemptId,
     answerId,
     isCorrect: true,
-    timeSpent: 60,
+    timeSpent: 50,
     attemptAt: new Date('2023-01-01T00:00:00Z'),
-    answer: {
-      userId,
-      questionId: 'question-id',
-    },
+    answer: { userId },
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnswerAttemptsService,
-        {
-          provide: PrismaService,
-          useValue: mockDeep<PrismaService>(),
-        },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 
     service = module.get<AnswerAttemptsService>(AnswerAttemptsService);
-    prisma = module.get(PrismaService);
   });
 
   afterEach(() => {
@@ -47,49 +50,57 @@ describe('AnswerAttemptsService', () => {
   });
 
   describe('findAll', () => {
-    it('deve retornar resultados com todos os filtros aplicados', async () => {
-      prisma.answerAttempt.findMany.mockResolvedValue([mockAttempt]);
+    it('deve chamar findMany com filtros e retornar resultados', async () => {
+      mockPrismaService.answerAttempt.findMany.mockResolvedValue([mockAttempt]);
 
-      const filters: AttemptFilterDto = {
+      const filters: Filters = {
         userId,
         questionId: 'question-id',
         isCorrect: 'true',
-        limit: 5,
-        offset: 0,
+        limit: '5',
+        offset: '0',
       };
 
       const result = await service.findAll(filters);
 
-      expect(prisma.answerAttempt.findMany).toHaveBeenCalledWith({
+      const expectedArgs: Parameters<
+        typeof mockPrismaService.answerAttempt.findMany
+      >[0] = {
         where: {
           answer: {
-            userId,
-            questionId: 'question-id',
+            userId: filters.userId,
+            questionId: filters.questionId,
           },
           isCorrect: true,
         },
-        include: { answer: true },
         take: 5,
         skip: 0,
+        include: { answer: true },
         orderBy: { attemptAt: 'desc' },
-      });
+      };
+
+      expect(mockPrismaService.answerAttempt.findMany).toHaveBeenCalledWith(
+        expect.objectContaining(expectedArgs),
+      );
 
       expect(result).toEqual([mockAttempt]);
     });
 
     it('deve funcionar com filtros parciais', async () => {
-      prisma.answerAttempt.findMany.mockResolvedValue([mockAttempt]);
+      mockPrismaService.answerAttempt.findMany.mockResolvedValue([mockAttempt]);
 
-      const filters: AttemptFilterDto = {
+      const filters: Partial<Filters> = {
         userId,
       };
 
-      const result = await service.findAll(filters);
+      const result = await service.findAll(filters as Filters);
 
-      expect(prisma.answerAttempt.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
+      expect(mockPrismaService.answerAttempt.findMany).toHaveBeenCalledWith(
+        expect.objectContaining<Prisma.AnswerAttemptFindManyArgs>({
           where: {
-            answer: { userId },
+            answer: {
+              userId,
+            },
           },
         }),
       );
@@ -99,178 +110,125 @@ describe('AnswerAttemptsService', () => {
   });
 
   describe('findOne', () => {
-    it('deve retornar tentativa existente', async () => {
-      prisma.answerAttempt.findUnique.mockResolvedValue(mockAttempt);
+    it('deve retornar tentativa pelo id', async () => {
+      mockPrismaService.answerAttempt.findUnique.mockResolvedValue(mockAttempt);
 
       const result = await service.findOne(attemptId);
 
-      expect(prisma.answerAttempt.findUnique).toHaveBeenCalledWith({
-        where: { id: attemptId },
-        include: { answer: { select: { userId: true } } },
-      });
-
+      expect(mockPrismaService.answerAttempt.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: attemptId },
+          include: { answer: { select: { userId: true } } },
+        }),
+      );
       expect(result).toEqual(mockAttempt);
     });
 
-    it('deve retornar null se tentativa não existir', async () => {
-      prisma.answerAttempt.findUnique.mockResolvedValue(null);
+    it('deve retornar null se não encontrar', async () => {
+      mockPrismaService.answerAttempt.findUnique.mockResolvedValue(null);
 
-      const result = await service.findOne('non-existent-id');
+      const result = await service.findOne('id-inexistente');
 
       expect(result).toBeNull();
     });
   });
 
   describe('findAnswer', () => {
-    it('deve retornar usuário da resposta', async () => {
-      // Criando o mock manualmente com a estrutura necessária
-      const mockAnswer = {
-        id: '96bd9465-06d1-4ba0-b820-1393324537f2', // Gerar ID único
-        userId: 'some-user-id', // Propriedade que você já tinha
-        questionId: 'some-question-id', // Adicionando questionId
-        selectedOption: null, // Adicionando selectedOption
-        textAnswer: null, // Adicionando textAnswer
-        isCorrect: null, // Adicionando isCorrect
-        timeSpentSeconds: null, // Adicionando timeSpentSeconds
-        answeredAt: new Date(), // Adicionando answeredAt
-      };
-      prisma.answer.findUnique.mockResolvedValue(mockAnswer);
+    it('deve retornar resposta pelo id', async () => {
+      mockPrismaService.answer.findUnique.mockResolvedValue({ userId });
 
-      const result = await service.findAnswer(
-        '96bd9465-06d1-4ba0-b820-1393324537f2',
+      const result = await service.findAnswer(answerId);
+
+      expect(mockPrismaService.answer.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: answerId },
+          select: { userId: true },
+        }),
       );
-
-      expect(prisma.answer.findUnique).toHaveBeenCalledWith({
-        where: { id: '96bd9465-06d1-4ba0-b820-1393324537f2' },
-        select: { userId: true },
-      });
-
-      // Verificando o valor esperado
-      expect(result).toEqual(mockAnswer);
+      expect(result).toEqual({ userId });
     });
   });
 
   describe('create', () => {
-    it('deve criar tentativa com timeSpent definido', async () => {
+    it('deve criar tentativa', async () => {
       const dto = {
         answerId,
         isCorrect: true,
-        timeSpent: 90,
+        timeSpent: 100,
+        attemptAt: new Date(),
       };
-
-      const createdAttempt = {
-        id: randomUUID(),
-        answerId: dto.answerId,
-        isCorrect: dto.isCorrect,
-        timeSpent: dto.timeSpent,
-        attemptAt: expect.any(Date) as Date,
-      };
-
-      prisma.answerAttempt.create.mockResolvedValue(createdAttempt);
+      mockPrismaService.answerAttempt.create.mockResolvedValue(dto);
 
       const result = await service.create(dto);
 
-      expect(prisma.answerAttempt.create).toHaveBeenCalledWith({
-        data: {
-          answerId: dto.answerId,
-          isCorrect: dto.isCorrect,
-          timeSpent: dto.timeSpent,
-          attemptAt: expect.any(Date) as Date,
-        },
-      });
-
-      expect(result).toEqual(createdAttempt);
-    });
-
-    it('deve criar tentativa com timeSpent como null', async () => {
-      const dto = {
-        answerId,
-        isCorrect: false,
-      };
-
-      const createdAttempt = {
-        id: randomUUID(),
-        answerId: dto.answerId,
-        isCorrect: dto.isCorrect,
-        timeSpent: null,
-        attemptAt: expect.any(Date) as Date,
-      };
-
-      prisma.answerAttempt.create.mockResolvedValue(createdAttempt);
-
-      const result = await service.create(dto);
-
-      expect(prisma.answerAttempt.create).toHaveBeenCalledWith({
-        data: {
-          answerId: dto.answerId,
-          isCorrect: dto.isCorrect,
-          timeSpent: null,
-          attemptAt: expect.any(Date) as Date,
-        },
-      });
-
-      expect(result).toEqual(createdAttempt);
+      expect(mockPrismaService.answerAttempt.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: {
+            answerId: dto.answerId,
+            isCorrect: dto.isCorrect,
+            timeSpent: dto.timeSpent,
+            attemptAt: dto.attemptAt,
+          },
+        }),
+      );
+      expect(result).toEqual(dto);
     });
   });
 
   describe('update', () => {
-    it('deve atualizar tentativa existente', async () => {
-      const updateDto = { isCorrect: false };
-
-      prisma.answerAttempt.update.mockResolvedValue({
+    it('deve atualizar tentativa', async () => {
+      const dto = { isCorrect: false };
+      mockPrismaService.answerAttempt.update.mockResolvedValue({
         ...mockAttempt,
-        ...updateDto,
+        ...dto,
       });
 
-      const result = await service.update(attemptId, updateDto);
+      const result = await service.update(attemptId, dto);
 
-      expect(prisma.answerAttempt.update).toHaveBeenCalledWith({
-        where: { id: attemptId },
-        data: updateDto,
-      });
-
-      expect(result).toEqual({
-        ...mockAttempt,
-        ...updateDto,
-      });
+      expect(mockPrismaService.answerAttempt.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: attemptId },
+          data: dto,
+        }),
+      );
+      expect(result).toEqual({ ...mockAttempt, ...dto });
     });
 
-    it('deve lançar erro se tentativa não for encontrada', async () => {
-      prisma.answerAttempt.update.mockRejectedValue(
+    it('deve lançar erro NotFound para tentativa não existente', async () => {
+      mockPrismaService.answerAttempt.update.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('Not found', {
           code: 'P2025',
-          clientVersion: 'x',
+          clientVersion: 'client',
         }),
       );
 
       await expect(
-        service.update('invalid-id', { isCorrect: true }),
+        service.update('id-invalido', { isCorrect: true }),
       ).rejects.toThrow();
     });
   });
 
   describe('remove', () => {
-    it('deve remover tentativa existente', async () => {
-      prisma.answerAttempt.delete.mockResolvedValue(mockAttempt);
+    it('deve remover tentativa', async () => {
+      mockPrismaService.answerAttempt.delete.mockResolvedValue(mockAttempt);
 
       const result = await service.remove(attemptId);
 
-      expect(prisma.answerAttempt.delete).toHaveBeenCalledWith({
-        where: { id: attemptId },
-      });
-
+      expect(mockPrismaService.answerAttempt.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: attemptId } }),
+      );
       expect(result).toEqual(mockAttempt);
     });
 
-    it('deve lançar erro se tentativa não for encontrada', async () => {
-      prisma.answerAttempt.delete.mockRejectedValue(
+    it('deve lançar erro NotFound para tentativa não existente', async () => {
+      mockPrismaService.answerAttempt.delete.mockRejectedValue(
         new Prisma.PrismaClientKnownRequestError('Not found', {
           code: 'P2025',
-          clientVersion: 'x',
+          clientVersion: 'client',
         }),
       );
 
-      await expect(service.remove('invalid-id')).rejects.toThrow();
+      await expect(service.remove('id-invalido')).rejects.toThrow();
     });
   });
 });

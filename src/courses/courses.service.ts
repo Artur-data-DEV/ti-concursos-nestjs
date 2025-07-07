@@ -1,73 +1,49 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, Course } from '@prisma/client';
-
-interface FindAllFilters {
-  title?: string;
-  instructorId?: string;
-  limit?: string;
-  offset?: string;
-}
 
 @Injectable()
 export class CoursesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) {}
 
-  async findAll(filters: FindAllFilters): Promise<Course[]> {
-    const { title, instructorId, limit, offset } = filters;
-
-    const take = limit && !isNaN(Number(limit)) ? parseInt(limit) : undefined;
-    const skip =
-      offset && !isNaN(Number(offset)) ? parseInt(offset) : undefined;
-
+  async findAll(filters: any) {
     return this.prisma.course.findMany({
       where: {
-        ...(title && {
-          title: {
-            contains: title,
-            mode: 'insensitive',
-          },
+        ...(filters.title && {
+          title: { contains: filters.title, mode: 'insensitive' },
         }),
-        ...(instructorId && { instructorId }),
+        ...(filters.instructorId && { instructorId: filters.instructorId }),
       },
       include: {
-        modules: {
-          include: {
-            lessons: true,
-          },
-        },
+        modules: { include: { lessons: true } },
         enrollments: true,
         reviews: true,
       },
-      take,
-      skip,
+      take: filters.limit ? parseInt(filters.limit) : undefined,
+      skip: filters.offset ? parseInt(filters.offset) : undefined,
     });
   }
 
-  async findOne(
-    id: string,
-  ): Promise<Pick<Course, 'id' | 'instructorId'> | null> {
+  async findOne(id: string) {
     return this.prisma.course.findUnique({
       where: { id },
-      select: {
-        id: true,
-        instructorId: true,
-      },
+      select: { instructorId: true, id: true },
     });
   }
 
-  async create(data: Prisma.CourseCreateInput): Promise<Course> {
-    return this.prisma.course.create({ data });
+  async create(data: any) {
+    return this.prisma.course.create({
+      data,
+    });
   }
 
-  async update(id: string, data: Prisma.CourseUpdateInput): Promise<Course> {
+  async update(id: string, data: any) {
     return this.prisma.course.update({
       where: { id },
       data,
     });
   }
 
-  async remove(id: string): Promise<Course> {
+  async remove(id: string) {
     return this.prisma.course.delete({
       where: { id },
     });

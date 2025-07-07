@@ -1,15 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAnswerDto } from './answers.dto';
 
 @Injectable()
 export class AnswersService {
   constructor(private prisma: PrismaService) {}
-  async findOne(id: string) {
-    return this.prisma.answer.findUnique({ where: { id } });
-  }
 
-  async create(data: CreateAnswerDto) {
+  async create(data: any) {
     return this.prisma.answer.create({
       data: {
         userId: data.userId,

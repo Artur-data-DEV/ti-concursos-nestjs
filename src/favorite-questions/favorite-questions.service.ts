@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { FindQuestionsFiltersDto } from '../common/dto/filters.dto';
 
 @Injectable()
 export class FavoriteQuestionsService {
@@ -11,24 +10,7 @@ export class FavoriteQuestionsService {
     return this.prisma.favoriteQuestion.create({ data });
   }
 
-  async findAll(filters?: FindQuestionsFiltersDto) {
-    if (filters) {
-      const { userId, questionId, limit, offset } = filters;
-      const where: Prisma.FavoriteQuestionWhereInput = {};
-      if (userId) {
-        where.userId = userId;
-      }
-      if (questionId) {
-        where.questionId = questionId;
-      }
-      return this.prisma.favoriteQuestion.findMany({
-        where,
-        take: limit,
-        skip: offset,
-        orderBy: { markedAt: 'desc' },
-        include: { question: true, user: true },
-      });
-    }
+  async findAll() {
     return this.prisma.favoriteQuestion.findMany();
   }
 
@@ -56,15 +38,5 @@ export class FavoriteQuestionsService {
 
   async remove(userId_questionId: Prisma.FavoriteQuestionWhereUniqueInput) {
     return this.prisma.favoriteQuestion.delete({ where: userId_questionId });
-  }
-
-  async findQuestionById(questionId: string) {
-    return this.prisma.question.findUnique({ where: { id: questionId } });
-  }
-
-  async findUser(userId: string) {
-    return this.prisma.user.findUnique({
-      where: { id: userId },
-    });
   }
 }

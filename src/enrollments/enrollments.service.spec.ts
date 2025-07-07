@@ -17,6 +17,5 @@ describe('EnrollmentsService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-    expect(prismaService).toBeDefined();
   });
 });

@@ -4,11 +4,7 @@ import { NotificationsService } from './notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 
 describe('NotificationsController', () => {
   let controller: NotificationsController;
@@ -74,9 +70,7 @@ describe('NotificationsController', () => {
 
   describe('findAll', () => {
     it('should return a list of notifications for ADMIN', async () => {
-      mockPrismaService.notification.findMany.mockResolvedValue([
-        mockNotification,
-      ]);
+      mockPrismaService.notification.findMany.mockResolvedValue([mockNotification]);
 
       const result = await controller.findAll(mockAuthenticatedAdminRequest);
 
@@ -85,71 +79,50 @@ describe('NotificationsController', () => {
     });
 
     it('should return notification by ID for ADMIN', async () => {
-      mockPrismaService.notification.findUnique.mockResolvedValue(
-        mockNotification,
-      );
+      mockPrismaService.notification.findUnique.mockResolvedValue(mockNotification);
 
       const result = await controller.findOne(mockNotificationId);
 
       expect(result).toEqual(mockNotification);
-      expect(mockPrismaService.notification.findUnique).toHaveBeenCalledWith({
-        where: { id: mockNotificationId },
-      });
+      expect(mockPrismaService.notification.findUnique).toHaveBeenCalledWith({ where: { id: mockNotificationId } });
     });
 
     it('should return own notifications for STUDENT', async () => {
-      mockPrismaService.notification.findMany.mockResolvedValue([
-        mockNotification,
-      ]);
+      mockPrismaService.notification.findMany.mockResolvedValue([mockNotification]);
 
       const result = await controller.findAll(mockAuthenticatedStudentRequest);
 
       expect(result).toEqual([mockNotification]);
-      expect(mockPrismaService.notification.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            userId: mockUserId,
-          },
-        }),
-      );
+      expect(mockPrismaService.notification.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: {
+          userId: mockUserId,
+        },
+      }));
     });
 
     it('should return specific notification for STUDENT if it belongs to them', async () => {
-      mockPrismaService.notification.findUnique.mockResolvedValue(
-        mockNotification,
-      );
+      mockPrismaService.notification.findUnique.mockResolvedValue(mockNotification);
 
       const result = await controller.findOne(mockNotificationId);
 
       expect(result).toEqual(mockNotification);
-      expect(mockPrismaService.notification.findUnique).toHaveBeenCalledWith({
-        where: { id: mockNotificationId },
-      });
+      expect(mockPrismaService.notification.findUnique).toHaveBeenCalledWith({ where: { id: mockNotificationId } });
     });
 
     it('should throw ForbiddenException for STUDENT accessing other user notification', async () => {
-      mockPrismaService.notification.findUnique.mockResolvedValue({
-        ...mockNotification,
-        userId: randomUUID(),
-      });
+      mockPrismaService.notification.findUnique.mockResolvedValue({ ...mockNotification, userId: randomUUID() });
 
-      await expect(
-        controller.findAll(mockAuthenticatedStudentRequest),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(controller.findAll(mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
-      await expect(
-        controller.findAll(mockAuthenticatedAdminRequest, 'invalid-id'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.findAll(mockAuthenticatedAdminRequest, 'invalid-id')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when notification not found', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue(null);
 
-      await expect(
-        controller.findAll(mockAuthenticatedAdminRequest, randomUUID()),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.findAll(mockAuthenticatedAdminRequest, randomUUID())).rejects.toThrow(NotFoundException);
     });
 
     it('should apply filters when provided', async () => {
@@ -171,16 +144,14 @@ describe('NotificationsController', () => {
         filters.offset,
       );
 
-      expect(mockPrismaService.notification.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: {
-            userId: filters.userId,
-            read: filters.read,
-          },
-          take: 10,
-          skip: 0,
-        }),
-      );
+      expect(mockPrismaService.notification.findMany).toHaveBeenCalledWith(expect.objectContaining({
+        where: {
+          userId: filters.userId,
+          read: filters.read,
+        },
+        take: 10,
+        skip: 0,
+      }));
     });
   });
 
@@ -191,35 +162,22 @@ describe('NotificationsController', () => {
     };
 
     it('should create notification for ADMIN', async () => {
-      const createdNotification = {
-        id: randomUUID(),
-        ...createNotificationDto,
-        read: false,
-        createdAt: new Date(),
-      };
-      mockPrismaService.notification.create.mockResolvedValue(
-        createdNotification,
-      );
+      const createdNotification = { id: randomUUID(), ...createNotificationDto, read: false, createdAt: new Date() };
+      mockPrismaService.notification.create.mockResolvedValue(createdNotification);
 
       const result = await controller.create(createNotificationDto);
 
       expect(result).toEqual(createdNotification);
-      expect(mockPrismaService.notification.create).toHaveBeenCalledWith({
-        data: createNotificationDto,
-      });
+      expect(mockPrismaService.notification.create).toHaveBeenCalledWith({ data: createNotificationDto });
     });
 
-    it('should throw BadRequestException for invalid data', async () => {
+    it("should throw BadRequestException for invalid data", async () => {
       const invalidDto = { ...createNotificationDto, userId: 'invalid-id' };
-      await expect(controller.create(invalidDto)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(controller.create(invalidDto)).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw ForbiddenException for STUDENT', async () => {
-      await expect(controller.create(createNotificationDto)).rejects.toThrow(
-        ForbiddenException,
-      );
+    it("should throw ForbiddenException for STUDENT", async () => {
+      await expect(controller.create(createNotificationDto)).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -228,129 +186,83 @@ describe('NotificationsController', () => {
 
     it('should update notification for ADMIN', async () => {
       const updatedNotification = { ...mockNotification, ...updateDto };
-      mockPrismaService.notification.findUnique.mockResolvedValue(
-        mockNotification,
-      );
-      mockPrismaService.notification.update.mockResolvedValue(
-        updatedNotification,
-      );
+      mockPrismaService.notification.findUnique.mockResolvedValue(mockNotification);
+      mockPrismaService.notification.update.mockResolvedValue(updatedNotification);
 
       const result = await controller.update(mockNotificationId, updateDto);
 
       expect(result).toEqual(updatedNotification);
-      expect(mockPrismaService.notification.update).toHaveBeenCalledWith({
-        where: { id: mockNotificationId },
-        data: updateDto,
-      });
+      expect(mockPrismaService.notification.update).toHaveBeenCalledWith({ where: { id: mockNotificationId }, data: updateDto });
     });
 
     it('should update own notification for STUDENT', async () => {
       const updatedNotification = { ...mockNotification, ...updateDto };
-      mockPrismaService.notification.findUnique.mockResolvedValue(
-        mockNotification,
-      );
-      mockPrismaService.notification.update.mockResolvedValue(
-        updatedNotification,
-      );
+      mockPrismaService.notification.findUnique.mockResolvedValue(mockNotification);
+      mockPrismaService.notification.update.mockResolvedValue(updatedNotification);
 
       const result = await controller.update(mockNotificationId, updateDto);
 
       expect(result).toEqual(updatedNotification);
-      expect(mockPrismaService.notification.update).toHaveBeenCalledWith({
-        where: { id: mockNotificationId },
-        data: updateDto,
-      });
+      expect(mockPrismaService.notification.update).toHaveBeenCalledWith({ where: { id: mockNotificationId }, data: updateDto });
     });
 
     it('should throw ForbiddenException for STUDENT updating other user notification', async () => {
-      mockPrismaService.notification.findUnique.mockResolvedValue({
-        ...mockNotification,
-        userId: randomUUID(),
-      });
+      mockPrismaService.notification.findUnique.mockResolvedValue({ ...mockNotification, userId: randomUUID() });
 
-      await expect(
-        controller.update(mockNotificationId, updateDto),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(controller.update(mockNotificationId, updateDto)).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
-      await expect(controller.update('invalid-id', updateDto)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(controller.update("invalid-id", updateDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException for invalid data', async () => {
       const invalidDto = { read: 'invalid' };
-      await expect(
-        controller.update(mockNotificationId, invalidDto),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.update(mockNotificationId, invalidDto)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when notification not found', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue(null);
 
-      await expect(
-        controller.update(
-          randomUUID(),
-          updateDto,
-          mockAuthenticatedAdminRequest,
-        ),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.update(randomUUID(), updateDto, mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('remove', () => {
     it('should delete notification for ADMIN', async () => {
-      mockPrismaService.notification.findUnique.mockResolvedValue(
-        mockNotification,
-      );
+      mockPrismaService.notification.findUnique.mockResolvedValue(mockNotification);
       mockPrismaService.notification.delete.mockResolvedValue(mockNotification);
 
       const result = await controller.remove(mockNotificationId);
 
       expect(result).toEqual({ message: 'Notification deleted' });
-      expect(mockPrismaService.notification.delete).toHaveBeenCalledWith({
-        where: { id: mockNotificationId },
-      });
+      expect(mockPrismaService.notification.delete).toHaveBeenCalledWith({ where: { id: mockNotificationId } });
     });
 
     it('should delete own notification for STUDENT', async () => {
-      mockPrismaService.notification.findUnique.mockResolvedValue(
-        mockNotification,
-      );
+      mockPrismaService.notification.findUnique.mockResolvedValue(mockNotification);
       mockPrismaService.notification.delete.mockResolvedValue(mockNotification);
 
       const result = await controller.remove(mockNotificationId);
 
       expect(result).toEqual({ message: 'Notification deleted' });
-      expect(mockPrismaService.notification.delete).toHaveBeenCalledWith({
-        where: { id: mockNotificationId },
-      });
+      expect(mockPrismaService.notification.delete).toHaveBeenCalledWith({ where: { id: mockNotificationId } });
     });
 
     it('should throw ForbiddenException for STUDENT deleting other user notification', async () => {
-      mockPrismaService.notification.findUnique.mockResolvedValue({
-        ...mockNotification,
-        userId: randomUUID(),
-      });
+      mockPrismaService.notification.findUnique.mockResolvedValue({ ...mockNotification, userId: randomUUID() });
 
-      await expect(
-        controller.remove(mockNotificationId, mockAuthenticatedStudentRequest),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(controller.remove(mockNotificationId, mockAuthenticatedStudentRequest)).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
-      await expect(
-        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
-      ).rejects.toThrow(BadRequestException);
+      await expect(controller.remove('invalid-id', mockAuthenticatedAdminRequest)).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when notification not found', async () => {
       mockPrismaService.notification.findUnique.mockResolvedValue(null);
 
-      await expect(
-        controller.remove(randomUUID(), mockAuthenticatedAdminRequest),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.remove(randomUUID(), mockAuthenticatedAdminRequest)).rejects.toThrow(NotFoundException);
     });
   });
 });
