@@ -97,6 +97,10 @@ describe('AnswerAttemptsController', () => {
       attemptAt: new Date(),
     };
 
+    it('deve lançar BadRequestException se dados inválidos', async () => {
+      await expect(controller.create({} as CreateAnswerAttemptDto, adminReq)).rejects.toThrow(BadRequestException);
+    });
+
     it('deve lançar ForbiddenException se não autenticado', async () => {
       await expect(
         controller.create(newAttemptDto, {} as AuthenticatedRequest),
@@ -140,16 +144,16 @@ describe('AnswerAttemptsController', () => {
       attemptAt: new Date(),
     };
 
-    it('deve lançar ForbiddenException se não autenticado', async () => {
-      await expect(
-        controller.update(attemptId, updateDto, {} as AuthenticatedRequest),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('deve lançar BadRequestException se id da rota e do DTO forem diferentes', async () => {
+    it("deve lançar BadRequestException se id da rota e do DTO forem diferentes", async () => {
       await expect(
         controller.update(randomUUID(), updateDto, adminReq),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it("deve lançar ForbiddenException se não autenticado", async () => {
+      await expect(
+        controller.update(attemptId, updateDto, {} as AuthenticatedRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('deve atualizar com sucesso', async () => {
@@ -176,22 +180,22 @@ describe('AnswerAttemptsController', () => {
   // --- remove ---
 
   describe('remove', () => {
-    it('deve lançar ForbiddenException se não autenticado', async () => {
-      await expect(
-        controller.remove(attemptId, {} as AuthenticatedRequest),
-      ).rejects.toThrow(ForbiddenException);
-    });
-
-    it('deve lançar BadRequestException se ID inválido', async () => {
+    it("deve lançar BadRequestException se ID inválido", async () => {
       const pipe = new ParseUUIDPipe();
 
       // Testa o pipe isoladamente, pois ele é executado na camada HTTP, antes do controller
       await expect(
-        pipe.transform('invalid-uuid', { type: 'param', data: '' }),
+        pipe.transform("invalid-uuid", { type: "param", data: "" }),
       ).rejects.toThrow(BadRequestException);
 
       // No teste unitário do controller, a validação do pipe não é executada
       // Para testar o pipe integrado, faça testes e2e (integração)
+    });
+
+    it("deve lançar ForbiddenException se não autenticado", async () => {
+      await expect(
+        controller.remove(attemptId, {} as AuthenticatedRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('deve remover com sucesso', async () => {
