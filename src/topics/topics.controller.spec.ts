@@ -3,22 +3,20 @@ import { TopicsController } from './topics.controller';
 import { TopicsService } from './topics.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { randomUUID } from 'crypto';
-import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
 import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { CreateTopicDto } from './dto/create-topic.dto';
+import { UpdateTopicDto } from './dto/update-topic.dto';
+import { adminReq, studentReq, professorReq } from '../../__mocks__/user-mocks';
 
 describe('TopicsController', () => {
   let controller: TopicsController;
   let service: TopicsService;
 
   const mockTopicId = randomUUID();
-  const mockAdminId = randomUUID();
-  const mockProfessorId = randomUUID();
-  const mockStudentId = randomUUID();
-
   const mockTopic = {
     id: mockTopicId,
     name: 'Test Topic',
@@ -33,27 +31,6 @@ describe('TopicsController', () => {
       delete: jest.fn(),
     },
   };
-
-  const mockAuthenticatedAdminRequest: AuthenticatedRequest = {
-    user: {
-      sub: mockAdminId,
-      role: 'ADMIN',
-    },
-  } as AuthenticatedRequest;
-
-  const mockAuthenticatedProfessorRequest: AuthenticatedRequest = {
-    user: {
-      sub: mockProfessorId,
-      role: 'PROFESSOR',
-    },
-  } as AuthenticatedRequest;
-
-  const mockAuthenticatedStudentRequest: AuthenticatedRequest = {
-    user: {
-      sub: mockStudentId,
-      role: 'STUDENT',
-    },
-  } as AuthenticatedRequest;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -77,41 +54,13 @@ describe('TopicsController', () => {
   });
 
   describe('findAll', () => {
-    it('should return a list of topics for any authenticated user', async () => {
+    it('should return a list of topics', async () => {
       mockPrismaService.topic.findMany.mockResolvedValue([mockTopic]);
 
-      const result = await controller.findAll(mockAuthenticatedStudentRequest);
+      const result = await controller.findAll();
 
       expect(result).toEqual([mockTopic]);
       expect(mockPrismaService.topic.findMany).toHaveBeenCalledTimes(1);
-    });
-
-    it('should return topic by ID for any authenticated user', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
-
-      const result = await controller.findAll(
-        mockAuthenticatedStudentRequest,
-        mockTopicId,
-      );
-
-      expect(result).toEqual(mockTopic);
-      expect(mockPrismaService.topic.findUnique).toHaveBeenCalledWith({
-        where: { id: mockTopicId },
-      });
-    });
-
-    it('should throw BadRequestException for invalid topic ID', async () => {
-      await expect(
-        controller.findAll(mockAuthenticatedStudentRequest, 'invalid-id'),
-      ).rejects.toThrow(BadRequestException);
-    });
-
-    it('should throw NotFoundException when topic not found', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(null);
-
-      await expect(
-        controller.findAll(mockAuthenticatedStudentRequest, randomUUID()),
-      ).rejects.toThrow(NotFoundException);
     });
 
     it('should apply filters when provided', async () => {
@@ -124,8 +73,6 @@ describe('TopicsController', () => {
       };
 
       await controller.findAll(
-        mockAuthenticatedStudentRequest,
-        undefined,
         filters.name,
         filters.limit,
         filters.offset,
@@ -143,8 +90,35 @@ describe('TopicsController', () => {
     });
   });
 
+  describe('findOne', () => {
+    it('should return topic by ID', async () => {
+      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
+
+      const result = await controller.findOne(mockTopicId);
+
+      expect(result).toEqual(mockTopic);
+      expect(mockPrismaService.topic.findUnique).toHaveBeenCalledWith({
+        where: { id: mockTopicId },
+      });
+    });
+
+    it('should throw NotFoundException when topic not found', async () => {
+      mockPrismaService.topic.findUnique.mockResolvedValue(null);
+
+      await expect(
+        controller.findOne(randomUUID()),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException for invalid topic ID', async () => {
+      await expect(
+        controller.findOne('invalid-id'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
   describe('create', () => {
-    const createTopicDto = {
+    const createTopicDto: CreateTopicDto = {
       name: 'New Topic',
     };
 
@@ -154,7 +128,7 @@ describe('TopicsController', () => {
 
       const result = await controller.create(
         createTopicDto,
-        mockAuthenticatedAdminRequest,
+        adminReq,
       );
 
       expect(result).toEqual(createdTopic);
@@ -164,21 +138,27 @@ describe('TopicsController', () => {
     });
 
     it('should throw BadRequestException for invalid data', async () => {
-      const invalidDto = { name: '' };
+      const invalidDto = { name: '' } as CreateTopicDto;
       await expect(
-        controller.create(invalidDto, mockAuthenticatedAdminRequest),
+        controller.create(invalidDto, adminReq),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw ForbiddenException for PROFESSOR', async () => {
       await expect(
-        controller.create(createTopicDto, mockAuthenticatedProfessorRequest),
+        controller.create(createTopicDto, professorReq),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException for STUDENT', async () => {
+      await expect(
+        controller.create(createTopicDto, studentReq),
       ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('update', () => {
-    const updateDto = { name: 'Updated Topic' };
+    const updateDto: UpdateTopicDto = { name: 'Updated Topic' };
 
     it('should update topic for ADMIN', async () => {
       const updatedTopic = { ...mockTopic, ...updateDto };
@@ -188,7 +168,7 @@ describe('TopicsController', () => {
       const result = await controller.update(
         mockTopicId,
         updateDto,
-        mockAuthenticatedAdminRequest,
+        adminReq,
       );
 
       expect(result).toEqual(updatedTopic);
@@ -199,12 +179,12 @@ describe('TopicsController', () => {
     });
 
     it('should throw BadRequestException for invalid data', async () => {
-      const invalidDto = { name: '' };
+      const invalidDto = { name: '' } as UpdateTopicDto;
       await expect(
         controller.update(
           mockTopicId,
           invalidDto,
-          mockAuthenticatedAdminRequest,
+          adminReq,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -214,7 +194,7 @@ describe('TopicsController', () => {
         controller.update(
           'invalid-id',
           updateDto,
-          mockAuthenticatedAdminRequest,
+          adminReq,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -226,7 +206,7 @@ describe('TopicsController', () => {
         controller.update(
           mockTopicId,
           updateDto,
-          mockAuthenticatedProfessorRequest,
+          professorReq,
         ),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -238,7 +218,7 @@ describe('TopicsController', () => {
         controller.update(
           mockTopicId,
           updateDto,
-          mockAuthenticatedStudentRequest,
+          studentReq,
         ),
       ).rejects.toThrow(ForbiddenException);
     });
@@ -251,10 +231,10 @@ describe('TopicsController', () => {
 
       const result = await controller.remove(
         mockTopicId,
-        mockAuthenticatedAdminRequest,
+        adminReq,
       );
 
-      expect(result).toEqual({ message: 'Topic deleted' });
+      expect(result).toEqual({ message: 'Tópico deletado com sucesso.' });
       expect(mockPrismaService.topic.delete).toHaveBeenCalledWith({
         where: { id: mockTopicId },
       });
@@ -262,7 +242,7 @@ describe('TopicsController', () => {
 
     it('should throw BadRequestException for invalid ID', async () => {
       await expect(
-        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
+        controller.remove('invalid-id', adminReq),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -270,8 +250,18 @@ describe('TopicsController', () => {
       mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
 
       await expect(
-        controller.remove(mockTopicId, mockAuthenticatedProfessorRequest),
+        controller.remove(mockTopicId, professorReq),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw ForbiddenException for STUDENT', async () => {
+      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
+
+      await expect(
+        controller.remove(mockTopicId, studentReq),
       ).rejects.toThrow(ForbiddenException);
     });
   });
 });
+
+
