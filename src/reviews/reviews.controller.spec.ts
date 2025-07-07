@@ -226,35 +226,28 @@ describe('ReviewsController', () => {
   describe('update', () => {
     const updateDto = { rating: 5, comment: 'Excellent course!' };
 
-    it('should update review for ADMIN', async () => {
-      const updatedReview = { ...mockReview, ...updateDto };
-      mockPrismaService.review.findUnique.mockResolvedValue(mockReview);
-      mockPrismaService.review.update.mockResolvedValue(updatedReview);
-
-      const result = await controller.update(mockReviewId, updateDto);
-
-      expect(result).toEqual(updatedReview);
-      expect(mockPrismaService.review.update).toHaveBeenCalledWith({
-        where: { id: mockReviewId },
-        data: updateDto,
-      });
+    it("should throw BadRequestException for invalid data", async () => {
+      const invalidDto = { rating: 6 };
+      await expect(
+        controller.update(
+          mockReviewId,
+          invalidDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it('should update own review for STUDENT', async () => {
-      const updatedReview = { ...mockReview, ...updateDto };
-      mockPrismaService.review.findUnique.mockResolvedValue(mockReview);
-      mockPrismaService.review.update.mockResolvedValue(updatedReview);
-
-      const result = await controller.update(mockReviewId, updateDto);
-
-      expect(result).toEqual(updatedReview);
-      expect(mockPrismaService.review.update).toHaveBeenCalledWith({
-        where: { id: mockReviewId },
-        data: updateDto,
-      });
+    it("should throw BadRequestException for invalid ID", async () => {
+      await expect(
+        controller.update(
+          "invalid-id",
+          updateDto,
+          mockAuthenticatedAdminRequest,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw ForbiddenException for STUDENT updating other user review', async () => {
+    it("should throw ForbiddenException for STUDENT updating other user review", async () => {
       mockPrismaService.review.findUnique.mockResolvedValue({
         ...mockReview,
         userId: randomUUID(),
@@ -269,25 +262,32 @@ describe('ReviewsController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw BadRequestException for invalid data', async () => {
-      const invalidDto = { rating: 6 };
-      await expect(
-        controller.update(
-          mockReviewId,
-          invalidDto,
-          mockAuthenticatedAdminRequest,
-        ),
-      ).rejects.toThrow(BadRequestException);
+    it("should update review for ADMIN", async () => {
+      const updatedReview = { ...mockReview, ...updateDto };
+      mockPrismaService.review.findUnique.mockResolvedValue(mockReview);
+      mockPrismaService.review.update.mockResolvedValue(updatedReview);
+
+      const result = await controller.update(mockReviewId, updateDto);
+
+      expect(result).toEqual(updatedReview);
+      expect(mockPrismaService.review.update).toHaveBeenCalledWith({
+        where: { id: mockReviewId },
+        data: updateDto,
+      });
     });
 
-    it('should throw BadRequestException for invalid ID', async () => {
-      await expect(
-        controller.update(
-          'invalid-id',
-          updateDto,
-          mockAuthenticatedAdminRequest,
-        ),
-      ).rejects.toThrow(BadRequestException);
+    it("should update own review for STUDENT", async () => {
+      const updatedReview = { ...mockReview, ...updateDto };
+      mockPrismaService.review.findUnique.mockResolvedValue(mockReview);
+      mockPrismaService.review.update.mockResolvedValue(updatedReview);
+
+      const result = await controller.update(mockReviewId, updateDto);
+
+      expect(result).toEqual(updatedReview);
+      expect(mockPrismaService.review.update).toHaveBeenCalledWith({
+        where: { id: mockReviewId },
+        data: updateDto,
+      });
     });
 
     it('should throw NotFoundException when review not found', async () => {
@@ -303,38 +303,13 @@ describe('ReviewsController', () => {
     });
   });
 
-  describe('remove', () => {
-    it('should delete review for ADMIN', async () => {
-      mockPrismaService.review.findUnique.mockResolvedValue(mockReview);
-      mockPrismaService.review.delete.mockResolvedValue(mockReview);
-
-      const result = await controller.remove(mockReviewId);
-
-      expect(result).toEqual({ message: 'Review deleted' });
-      expect(mockPrismaService.review.delete).toHaveBeenCalledWith({
-        where: { id: mockReviewId },
-      });
-    });
-
-    it('should delete own review for STUDENT', async () => {
-      mockPrismaService.review.findUnique.mockResolvedValue(mockReview);
-      mockPrismaService.review.delete.mockResolvedValue(mockReview);
-
-      const result = await controller.remove(mockReviewId);
-
-      expect(result).toEqual({ message: 'Review deleted' });
-      expect(mockPrismaService.review.delete).toHaveBeenCalledWith({
-        where: { id: mockReviewId },
-      });
-    });
-
-    it('should throw BadRequestException for invalid ID', async () => {
+    it("should throw BadRequestException for invalid ID", async () => {
       await expect(
-        controller.remove('invalid-id', mockAuthenticatedAdminRequest),
+        controller.remove("invalid-id", mockAuthenticatedAdminRequest),
       ).rejects.toThrow(BadRequestException);
     });
 
-    it('should throw ForbiddenException for STUDENT deleting other user review', async () => {
+    it("should throw ForbiddenException for STUDENT deleting other user review", async () => {
       mockPrismaService.review.findUnique.mockResolvedValue({
         ...mockReview,
         userId: randomUUID(),
@@ -345,7 +320,21 @@ describe('ReviewsController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw NotFoundException when review not found', async () => {
+    it("should delete review for ADMIN", async () => {
+      mockPrismaService.review.findUnique.mockResolvedValue(
+        mockReview,
+      );
+      mockPrismaService.review.delete.mockResolvedValue(mockReview);
+
+      const result = await controller.remove(mockReviewId);
+
+      expect(result).toEqual({ message: "Review deleted" });
+      expect(mockPrismaService.review.delete).toHaveBeenCalledWith({
+        where: { id: mockReviewId },
+      });
+    });
+
+    it("should throw NotFoundException when review not found", async () => {
       mockPrismaService.review.findUnique.mockResolvedValue(null);
 
       await expect(
