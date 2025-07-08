@@ -5,10 +5,12 @@ import { EnrollmentsService } from './enrollments.service';
 import { CreateEnrollmentDto, UpdateEnrollmentDto } from './enrollments.dto';
 import { randomUUID } from 'crypto';
 import { EnrollmentStatus } from '@prisma/client';
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+
 describe('EnrollmentsController', () => {
   let controller: EnrollmentsController;
-  let service: EnrollmentsService;
+  let service: DeepMockProxy<EnrollmentsService>;
 
   const mockEnrollmentId = randomUUID();
   const mockUserId = randomUUID();
@@ -22,28 +24,19 @@ describe('EnrollmentsController', () => {
     status: EnrollmentStatus.ACTIVE,
   };
 
-  const mockService = {
-    create: jest.fn(),
-    findAll: jest.fn(),
-    findManyByUserId: jest.fn(),
-    findOne: jest.fn(),
-    update: jest.fn(),
-    remove: jest.fn(),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [EnrollmentsController],
       providers: [
         {
           provide: EnrollmentsService,
-          useValue: mockService,
+          useValue: mockDeep<EnrollmentsService>(),
         },
       ],
     }).compile();
 
     controller = module.get<EnrollmentsController>(EnrollmentsController);
-    service = module.get<EnrollmentsService>(EnrollmentsService);
+    service = module.get(EnrollmentsService);
 
     jest.clearAllMocks();
   });
@@ -77,12 +70,12 @@ describe('EnrollmentsController', () => {
         status: dto.status,
       };
 
-      mockService.create.mockResolvedValue(mockEnrollment);
+      service.create.mockResolvedValue(mockEnrollment);
 
       const result = await controller.create(dto, adminReq);
 
       expect(result).toEqual(mockEnrollment);
-      expect(mockService.create).toHaveBeenCalledWith(prismaCreateInput);
+      expect(service.create).toHaveBeenCalledWith(prismaCreateInput);
     });
 
     it('should throw ForbiddenException if non-ADMIN tries to create', async () => {
@@ -95,27 +88,27 @@ describe('EnrollmentsController', () => {
         ForbiddenException,
       );
 
-      expect(mockService.create).not.toHaveBeenCalled();
+      expect(service.create).not.toHaveBeenCalled();
     });
   });
 
   describe('findAll', () => {
     it('should return all enrollments for ADMIN', async () => {
-      mockService.findAll.mockResolvedValue([mockEnrollment]);
+      service.findAll.mockResolvedValue([mockEnrollment]);
 
       const result = await controller.findAll(adminReq);
 
       expect(result).toEqual([mockEnrollment]);
-      expect(mockService.findAll).toHaveBeenCalled();
+      expect(service.findAll).toHaveBeenCalled();
     });
 
     it('should return only student enrollments for STUDENT', async () => {
-      mockService.findManyByUserId.mockResolvedValue([mockEnrollment]);
+      service.findManyByUserId.mockResolvedValue([mockEnrollment]);
 
       const result = await controller.findAll(studentReq);
 
       expect(result).toEqual([mockEnrollment]);
-      expect(mockService.findManyByUserId).toHaveBeenCalledWith(
+      expect(service.findManyByUserId).toHaveBeenCalledWith(
         studentReq.user.sub,
       );
     });
@@ -123,12 +116,12 @@ describe('EnrollmentsController', () => {
 
   describe('findOne', () => {
     it('should return enrollment if user is ADMIN', async () => {
-      mockService.findOne.mockResolvedValue(mockEnrollment);
+      service.findOne.mockResolvedValue(mockEnrollment);
 
       const result = await controller.findOne(mockEnrollmentId, adminReq);
 
       expect(result).toEqual(mockEnrollment);
-      expect(mockService.findOne).toHaveBeenCalledWith(mockEnrollmentId);
+      expect(service.findOne).toHaveBeenCalledWith(mockEnrollmentId);
     });
 
     it('should return enrollment if student owns it', async () => {
@@ -139,7 +132,7 @@ describe('EnrollmentsController', () => {
         enrolledAt: new Date(),
       };
 
-      mockService.findOne.mockResolvedValue(mockEnrollment);
+      service.findOne.mockResolvedValue(mockEnrollment);
 
       const result = await controller.findOne(mockEnrollment.id, studentReq);
 
@@ -147,7 +140,7 @@ describe('EnrollmentsController', () => {
     });
 
     it('should throw ForbiddenException if student accesses another enrollment', async () => {
-      mockService.findOne.mockResolvedValue({
+      service.findOne.mockResolvedValue({
         ...mockEnrollment,
         userId: randomUUID(), // ID diferente para simular outro usuário
       });
@@ -158,7 +151,7 @@ describe('EnrollmentsController', () => {
     });
 
     it('should throw NotFoundException if enrollment not found', async () => {
-      mockService.findOne.mockResolvedValue(null);
+      service.findOne.mockResolvedValue(null);
 
       await expect(
         controller.findOne(mockEnrollmentId, adminReq),
@@ -172,11 +165,11 @@ describe('EnrollmentsController', () => {
     });
 
     it("should call service.remove for ADMIN", async () => {
-      mockService.remove.mockResolvedValue(true);
+      service.remove.mockResolvedValue(true);
 
       await controller.remove(mockEnrollmentId);
 
-      expect(mockService.remove).toHaveBeenCalledWith(mockEnrollmentId);
+      expect(service.remove).toHaveBeenCalledWith(mockEnrollmentId);
     });
   });
 
@@ -198,18 +191,18 @@ describe('EnrollmentsController', () => {
         status: EnrollmentStatus.COMPLETED,
       };
 
-      mockService.update.mockResolvedValue(updatedEnrollment);
+      service.update.mockResolvedValue(updatedEnrollment);
 
       const result = await controller.update(mockEnrollmentId, updateDto);
 
       expect(result).toEqual(updatedEnrollment);
-      expect(mockService.update).toHaveBeenCalledWith(
+      expect(service.update).toHaveBeenCalledWith(
         mockEnrollmentId,
         updateDto,
       );
     });
     it('should throw NotFoundException when update fails', async () => {
-      mockService.update.mockResolvedValue(null);
+      service.update.mockResolvedValue(null);
 
       await expect(
         controller.update(mockEnrollmentId, {
@@ -219,3 +212,5 @@ describe('EnrollmentsController', () => {
     });
   });
 });
+
+
