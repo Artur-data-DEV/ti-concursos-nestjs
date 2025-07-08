@@ -9,10 +9,12 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 
 describe('QuestionsController', () => {
   let controller: QuestionsController;
-  let service: QuestionsService;
+  let service: DeepMockProxy<QuestionsService>;
+  let prismaService: DeepMockProxy<PrismaService>;
 
   const mockQuestionId = randomUUID();
   const mockAuthorId = randomUUID();
@@ -30,16 +32,6 @@ describe('QuestionsController', () => {
       { id: randomUUID(), text: 'Option 1', isCorrect: true, order: 1 },
       { id: randomUUID(), text: 'Option 2', isCorrect: false, order: 2 },
     ],
-  };
-
-  const mockPrismaService = {
-    question: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
   };
 
   const mockAuthenticatedAdminRequest: AuthenticatedRequest = {
@@ -67,13 +59,14 @@ describe('QuestionsController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [QuestionsController],
       providers: [
-        QuestionsService,
-        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: QuestionsService, useValue: mockDeep<QuestionsService>() },
+        { provide: PrismaService, useValue: mockDeep<PrismaService>() },
       ],
     }).compile();
 
     controller = module.get<QuestionsController>(QuestionsController);
-    service = module.get<QuestionsService>(QuestionsService);
+    service = module.get(QuestionsService);
+    prismaService = module.get(PrismaService);
   });
 
   afterEach(() => {
@@ -86,16 +79,16 @@ describe('QuestionsController', () => {
 
   describe('findAll', () => {
     it('should return a list of questions for any authenticated user', async () => {
-      mockPrismaService.question.findMany.mockResolvedValue([mockQuestion]);
+      service.findAll.mockResolvedValue([mockQuestion]);
 
       const result = await controller.findAll(mockAuthenticatedStudentRequest);
 
       expect(result).toEqual([mockQuestion]);
-      expect(mockPrismaService.question.findMany).toHaveBeenCalledTimes(1);
+      expect(service.findAll).toHaveBeenCalledTimes(1);
     });
 
     it('should return question by ID for any authenticated user', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
 
       const result = await controller.findAll(
         mockAuthenticatedStudentRequest,
@@ -103,10 +96,7 @@ describe('QuestionsController', () => {
       );
 
       expect(result).toEqual(mockQuestion);
-      expect(mockPrismaService.question.findUnique).toHaveBeenCalledWith({
-        where: { id: mockQuestionId },
-        include: { options: true, topic: true },
-      });
+      expect(service.findOne).toHaveBeenCalledWith(mockQuestionId);
     });
 
     it('should throw BadRequestException for invalid question ID', async () => {
@@ -116,7 +106,7 @@ describe('QuestionsController', () => {
     });
 
     it('should throw NotFoundException when question not found', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(null);
+      service.findOne.mockResolvedValue(null);
 
       await expect(
         controller.findAll(mockAuthenticatedStudentRequest, randomUUID()),
@@ -124,7 +114,7 @@ describe('QuestionsController', () => {
     });
 
     it('should apply filters when provided', async () => {
-      mockPrismaService.question.findMany.mockResolvedValue([]);
+      service.findAll.mockResolvedValue([]);
 
       const filters = {
         topicId: randomUUID(),
@@ -145,13 +135,12 @@ describe('QuestionsController', () => {
         filters.offset,
       );
 
-      expect(mockPrismaService.question.findMany).toHaveBeenCalledWith(
+      expect(service.findAll).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {
-            topicId: filters.topicId,
-          },
-          take: 10,
-          skip: 0,
+          topicId: filters.topicId,
+          difficulty: filters.difficulty,
+          limit: parseInt(filters.limit),
+          offset: parseInt(filters.offset),
         }),
       );
     });
@@ -188,7 +177,7 @@ describe('QuestionsController', () => {
         ...createQuestionDto,
         authorId: mockAuthorId,
       };
-      mockPrismaService.question.create.mockResolvedValue(createdQuestion);
+      service.create.mockResolvedValue(createdQuestion);
 
       const result = await controller.create(
         createQuestionDto,
@@ -196,8 +185,9 @@ describe('QuestionsController', () => {
       );
 
       expect(result).toEqual(createdQuestion);
-      expect(mockPrismaService.question.create).toHaveBeenCalledWith({
-        data: { ...createQuestionDto, authorId: mockAuthorId },
+      expect(service.create).toHaveBeenCalledWith({
+        ...createQuestionDto,
+        authorId: mockAuthorId,
       });
     });
 
@@ -207,7 +197,7 @@ describe('QuestionsController', () => {
         ...createQuestionDto,
         authorId: mockAdminId,
       };
-      mockPrismaService.question.create.mockResolvedValue(createdQuestion);
+      service.create.mockResolvedValue(createdQuestion);
 
       const result = await controller.create(
         createQuestionDto,
@@ -215,8 +205,9 @@ describe('QuestionsController', () => {
       );
 
       expect(result).toEqual(createdQuestion);
-      expect(mockPrismaService.question.create).toHaveBeenCalledWith({
-        data: { ...createQuestionDto, authorId: mockAdminId },
+      expect(service.create).toHaveBeenCalledWith({
+        ...createQuestionDto,
+        authorId: mockAdminId,
       });
     });
   });
@@ -235,7 +226,7 @@ describe('QuestionsController', () => {
     });
 
     it('should throw NotFoundException when question not found', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(null);
+      service.findOne.mockResolvedValue(null);
 
       await expect(
         controller.update(
@@ -250,7 +241,7 @@ describe('QuestionsController', () => {
       const otherProfessorRequest = {
         user: { sub: randomUUID(), role: 'PROFESSOR' },
       } as AuthenticatedRequest;
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
 
       await expect(
         controller.update(mockQuestionId, updateDto, otherProfessorRequest),
@@ -258,7 +249,7 @@ describe('QuestionsController', () => {
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
 
       await expect(
         controller.update(
@@ -271,8 +262,8 @@ describe('QuestionsController', () => {
 
     it('should update question for ADMIN', async () => {
       const updatedQuestion = { ...mockQuestion, ...updateDto };
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
-      mockPrismaService.question.update.mockResolvedValue(updatedQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
+      service.update.mockResolvedValue(updatedQuestion);
 
       const result = await controller.update(
         mockQuestionId,
@@ -281,16 +272,13 @@ describe('QuestionsController', () => {
       );
 
       expect(result).toEqual(updatedQuestion);
-      expect(mockPrismaService.question.update).toHaveBeenCalledWith({
-        where: { id: mockQuestionId },
-        data: updateDto,
-      });
+      expect(service.update).toHaveBeenCalledWith(mockQuestionId, updateDto);
     });
 
     it('should update own question for PROFESSOR', async () => {
       const updatedQuestion = { ...mockQuestion, ...updateDto };
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
-      mockPrismaService.question.update.mockResolvedValue(updatedQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
+      service.update.mockResolvedValue(updatedQuestion);
 
       const result = await controller.update(
         mockQuestionId,
@@ -299,10 +287,7 @@ describe('QuestionsController', () => {
       );
 
       expect(result).toEqual(updatedQuestion);
-      expect(mockPrismaService.question.update).toHaveBeenCalledWith({
-        where: { id: mockQuestionId },
-        data: updateDto,
-      });
+      expect(service.update).toHaveBeenCalledWith(mockQuestionId, updateDto);
     });
   });
 
@@ -314,7 +299,7 @@ describe('QuestionsController', () => {
     });
 
     it('should throw NotFoundException when question not found', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(null);
+      service.findOne.mockResolvedValue(null);
 
       await expect(
         controller.remove(randomUUID(), mockAuthenticatedAdminRequest),
@@ -325,7 +310,7 @@ describe('QuestionsController', () => {
       const otherProfessorRequest = {
         user: { sub: randomUUID(), role: 'PROFESSOR' },
       } as AuthenticatedRequest;
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
 
       await expect(
         controller.remove(mockQuestionId, otherProfessorRequest),
@@ -333,7 +318,7 @@ describe('QuestionsController', () => {
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
 
       await expect(
         controller.remove(mockQuestionId, mockAuthenticatedStudentRequest),
@@ -341,8 +326,8 @@ describe('QuestionsController', () => {
     });
 
     it('should delete question for ADMIN', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
-      mockPrismaService.question.delete.mockResolvedValue(mockQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
+      service.remove.mockResolvedValue(mockQuestion);
 
       const result = await controller.remove(
         mockQuestionId,
@@ -350,14 +335,12 @@ describe('QuestionsController', () => {
       );
 
       expect(result).toEqual({ message: 'Question deleted' });
-      expect(mockPrismaService.question.delete).toHaveBeenCalledWith({
-        where: { id: mockQuestionId },
-      });
+      expect(service.remove).toHaveBeenCalledWith(mockQuestionId);
     });
 
     it('should delete own question for PROFESSOR', async () => {
-      mockPrismaService.question.findUnique.mockResolvedValue(mockQuestion);
-      mockPrismaService.question.delete.mockResolvedValue(mockQuestion);
+      service.findOne.mockResolvedValue(mockQuestion);
+      service.remove.mockResolvedValue(mockQuestion);
 
       const result = await controller.remove(
         mockQuestionId,
@@ -365,9 +348,9 @@ describe('QuestionsController', () => {
       );
 
       expect(result).toEqual({ message: 'Question deleted' });
-      expect(mockPrismaService.question.delete).toHaveBeenCalledWith({
-        where: { id: mockQuestionId },
-      });
+      expect(service.remove).toHaveBeenCalledWith(mockQuestionId);
     });
   });
 });
+
+
