@@ -21,9 +21,9 @@ import { Roles } from '../auth/roles.decorator/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
-import { CreateCourseDto } from './create-course.dto';
+import { CreateCourseDto } from './dto/create-course.dto';
 import { isUUID } from 'class-validator';
-import { UpdateCourseDto } from './update-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
 
 @Controller('courses')
 export class CoursesController {

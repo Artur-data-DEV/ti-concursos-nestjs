@@ -3,7 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LessonsService } from './lessons.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { CreateLessonDto } from './create-lesson.dto';
+import { CreateLessonDto } from './dto/create-lesson.dto';
 import { LessonType, Prisma } from '@prisma/client';
 
 type ModuleWithCourse = Prisma.ModuleGetPayload<{
@@ -208,10 +208,10 @@ describe('LessonsService', () => {
     it('should return false if module does not exist', async () => {
       prisma.module.findUnique.mockResolvedValue(null);
 
-      const result = await service.isTeacherOwnerOfModule(
-        'teacher-id',
-        'nonexistent-module-id',
-      );
+      const result = await service.isTeacherOwnerOfModule({
+        teacherId: 'teacher-id',
+        moduleId: 'nonexistent-module-id',
+      });
 
       expect(result).toBe(false);
     });
@@ -232,10 +232,10 @@ describe('LessonsService', () => {
 
       prisma.module.findUnique.mockResolvedValue(mockModule);
 
-      const result = await service.isTeacherOwnerOfModule(
-        'teacher-id',
-        'module-id',
-      );
+      const result = await service.isTeacherOwnerOfModule({
+        teacherId: 'teacher-id',
+        moduleId: 'module-id',
+      });
 
       expect(result).toBe(false);
     });
@@ -247,10 +247,10 @@ describe('LessonsService', () => {
         },
       } as ModuleWithCourse);
 
-      const result = await service.isTeacherOwnerOfModule(
-        'teacher-id',
-        'module-id',
-      );
+      const result = await service.isTeacherOwnerOfModule({
+        teacherId: 'teacher-id',
+        moduleId: 'module-id',
+      });
 
       expect(prisma.module.findUnique).toHaveBeenCalledWith({
         where: { id: 'module-id' },
@@ -269,10 +269,10 @@ describe('LessonsService', () => {
     it('should return false if no module or instructor', async () => {
       prisma.module.findUnique.mockResolvedValue(null);
 
-      const result = await service.isTeacherOwnerOfModule(
-        'teacher-id',
-        'module-id',
-      );
+      const result = await service.isTeacherOwnerOfModule({
+        teacherId: 'teacher-id',
+        moduleId: 'module-id',
+      });
 
       expect(result).toBe(false);
     });

@@ -16,7 +16,7 @@ import {
   professorReq,
   studentReq,
 } from '../__mocks__/user_mocks';
-import { CreateCourseDto } from './create-course.dto';
+import { CreateCourseDto } from './dto/create-course.dto';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 const mockCourseId = randomUUID();

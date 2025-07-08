@@ -5,7 +5,7 @@ import { AnswersService } from './answers.service';
 import { randomUUID } from 'crypto';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { Answer } from '@prisma/client';
-import { CreateAnswerDto } from './create-answer.dto';
+import { CreateAnswerDto } from './dto/create-answer.dto';
 
 describe('AnswersService', () => {
   let service: AnswersService;

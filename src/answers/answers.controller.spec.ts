@@ -7,7 +7,7 @@ import { AnswersService } from './answers.service';
 import { AnswersController } from './answers.controller';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
-import { CreateAnswerDto } from './create-answer.dto';
+import { CreateAnswerDto } from './dto/create-answer.dto';
 
 describe('AnswersController', () => {
   let controller: AnswersController;

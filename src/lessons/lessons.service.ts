@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateLessonDto } from './create-lesson.dto';
-import { UpdateLessonDto } from './update-lesson.dto';
-import { LessonsFilterDto } from './lessons-filter-dto';
+import { CreateLessonDto } from './dto/create-lesson.dto';
+import { UpdateLessonDto } from './dto/update-lesson.dto';
+import { LessonsFilterDto } from './dto/lessons-filter-dto';
+import { ValidateUuidDto } from './dto/validate-uuid.dto';
 
 @Injectable()
 export class LessonsService {
@@ -43,11 +44,10 @@ export class LessonsService {
     return this.prisma.lesson.delete({ where: { id } });
   }
 
-  async isTeacherOwnerOfModule(
-    teacherId: string,
-    moduleId: string,
-  ): Promise<boolean> {
-    const module = await this.prisma.module.findUnique({
+  async isTeacherOwnerOfModule(dto: ValidateUuidDto): Promise<boolean> {
+    const { moduleId, teacherId } = dto;
+
+    const foundModule = await this.prisma.module.findUnique({
       where: { id: moduleId },
       select: {
         course: {
@@ -58,7 +58,9 @@ export class LessonsService {
       },
     });
 
-    return module?.course?.instructorId === teacherId;
+    if (!foundModule?.course) return false;
+
+    return foundModule.course.instructorId === teacherId;
   }
 
   async studentHasAccessToLesson(studentId: string, moduleId: string) {

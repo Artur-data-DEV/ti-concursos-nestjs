@@ -17,9 +17,9 @@ import {
 import { AnswerAttemptsController } from './answer-attempts.controller';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
 import { AnswerAttemptsService } from './answer-attempts.service';
-import { CreateAnswerAttemptDto } from './create-answer-attempt.dto';
+import { CreateAnswerAttemptDto } from './dto/create-answer-attempt.dto';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import { UpdateAnswerAttemptDto } from './update-answer-attempt.dto';
+import { UpdateAnswerAttemptDto } from './dto/update-answer-attempt.dto';
 
 describe('AnswerAttemptsController', () => {
   let controller: AnswerAttemptsController;

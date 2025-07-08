@@ -12,8 +12,8 @@ import {
 } from '@nestjs/common';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { adminReq, professorReq, studentReq } from '../__mocks__/user_mocks';
-import { CreateLessonDto } from './create-lesson.dto';
-import { Lesson } from '@prisma/client';
+import { CreateLessonDto } from './dto/create-lesson.dto';
+import { Lesson, Module } from '@prisma/client';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 
 describe('LessonsController', () => {
@@ -50,6 +50,10 @@ describe('LessonsController', () => {
     controller = module.get(LessonsController);
     service = module.get(LessonsService);
     moduleService = module.get(ModulesService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
   describe('findAll', () => {
@@ -137,7 +141,7 @@ describe('LessonsController', () => {
     });
 
     it('throws NotFoundException if TEACHER module not found', async () => {
-      moduleService.findOne.mockResolvedValue(null);
+      moduleService.findOne.mockResolvedValue(null as unknown as Module);
       await expect(controller.create(dto, professorReq)).rejects.toThrow(
         NotFoundException,
       );

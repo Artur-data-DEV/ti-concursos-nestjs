@@ -19,8 +19,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard/roles.guard';
 import { Roles } from '../auth/roles.decorator/roles.decorator';
 import { UserRole } from '@prisma/client';
-import { CreateLessonDto } from './create-lesson.dto';
-import { UpdateLessonDto } from './update-lesson.dto';
+import { CreateLessonDto } from './dto/create-lesson.dto';
+import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -44,10 +44,10 @@ export class LessonsController {
       );
       if (!moduleExists) throw new NotFoundException('Módulo não encontrado');
 
-      const isOwner = await this.lessonsService.isTeacherOwnerOfModule(
-        req.user.sub,
-        dto.moduleId,
-      );
+      const isOwner = await this.lessonsService.isTeacherOwnerOfModule({
+        teacherId: req.user.sub,
+        moduleId: dto.moduleId,
+      });
       if (!isOwner) {
         throw new ForbiddenException(
           'Você não tem permissão para criar lições neste módulo.',
@@ -143,10 +143,10 @@ export class LessonsController {
 
     if (
       user.role === UserRole.TEACHER &&
-      !(await this.lessonsService.isTeacherOwnerOfModule(
-        user.sub,
-        lesson.moduleId,
-      ))
+      !(await this.lessonsService.isTeacherOwnerOfModule({
+        teacherId: user.sub,
+        moduleId: lesson.moduleId,
+      }))
     ) {
       throw new ForbiddenException(
         'Você não tem permissão para atualizar esta lição.',

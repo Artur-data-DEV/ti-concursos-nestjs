@@ -9,7 +9,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { AnswersService } from './answers.service';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
-import { CreateAnswerDto } from './create-answer.dto';
+import { CreateAnswerDto } from './dto/create-answer.dto';
 
 @Controller('answers')
 export class AnswersController {

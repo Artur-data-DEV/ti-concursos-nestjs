@@ -7,53 +7,115 @@ import {
   Param,
   Delete,
   UseGuards,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  Req,
 } from '@nestjs/common';
 import { ModulesService } from './modules.service';
-import { Prisma } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard/roles.guard';
 import { Roles } from '../auth/roles.decorator/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { Module, UserRole } from '@prisma/client';
+import { CreateModuleDto } from './dto/create-module.dto';
+import { UpdateModuleDto } from './dto/update-module.dto';
+import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 
 @Controller('modules')
 export class ModulesController {
   constructor(private readonly modulesService: ModulesService) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Post()
-  create(@Body() createModuleDto: Prisma.ModuleCreateInput) {
-    return this.modulesService.create(createModuleDto);
+  async create(
+    @Body() createModuleDto: CreateModuleDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<Module> {
+    const user = req.user;
+
+    if (user.role === UserRole.STUDENT) {
+      throw new ForbiddenException(
+        'Students are not allowed to create modules.',
+      );
+    }
+
+    try {
+      return await this.modulesService.create(createModuleDto);
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  @Roles(UserRole.ADMIN, UserRole.STUDENT, UserRole.TEACHER)
   @Get()
-  findAll() {
+  async findAll(): Promise<Module[]> {
     return this.modulesService.findAll();
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN, UserRole.STUDENT)
+  @Roles(UserRole.ADMIN, UserRole.STUDENT, UserRole.TEACHER)
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.modulesService.findOne(id);
+  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Module> {
+    const module = await this.modulesService.findOne(id);
+
+    if (!module) {
+      throw new NotFoundException('Module not found');
+    }
+
+    return module;
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateModuleDto: Prisma.ModuleUpdateInput,
-  ) {
-    return this.modulesService.update(id, updateModuleDto);
+  async update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateModuleDto: UpdateModuleDto,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<Module> {
+    const user = req.user;
+
+    const existing = await this.modulesService.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Module not found');
+    }
+
+    if (user.role === UserRole.STUDENT) {
+      throw new ForbiddenException('Students cannot update modules.');
+    }
+
+    try {
+      return await this.modulesService.update(id, updateModuleDto);
+    } catch (error) {
+      throw new BadRequestException(error);
+    }
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.modulesService.remove(id);
+  @HttpCode(HttpStatus.OK)
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<{ message: string }> {
+    const user = req.user;
+
+    const existing = await this.modulesService.findOne(id);
+    if (!existing) {
+      throw new NotFoundException('Module not found');
+    }
+
+    if (user.role === UserRole.STUDENT) {
+      throw new ForbiddenException('Students cannot delete modules.');
+    }
+
+    await this.modulesService.remove(id);
+    return { message: 'Module deleted' };
   }
 }

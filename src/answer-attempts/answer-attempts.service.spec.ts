@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { randomUUID } from 'crypto';
-import { AttemptFilterDto } from './answer-attempts-filters.dto';
+import { AttemptFilterDto } from './dto/answer-attempts-filters.dto';
 
 describe('AnswerAttemptsService', () => {
   let service: AnswerAttemptsService;
