@@ -1,33 +1,42 @@
 import { adminReq, studentReq } from '../__mocks__/user_mocks';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 import { AnswersService } from './answers.service';
 import { AnswersController } from './answers.controller';
-import { plainToInstance } from 'class-transformer';
-import { validateSync } from 'class-validator';
+import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { CreateAnswerDto } from './dto/create-answer.dto';
 
 describe('AnswersController', () => {
   let controller: AnswersController;
+  let service: DeepMockProxy<AnswersService>;
 
-  const mockAnswersService = {
-    create: jest.fn(),
+  const mockAnswerId = randomUUID();
+  const mockQuestionId = randomUUID();
+  const mockUserId = randomUUID();
+
+  const mockAnswer = {
+    id: mockAnswerId,
+    userId: mockUserId,
+    questionId: mockQuestionId,
+    selectedOption: 'A',
+    textAnswer: 'Texto de exemplo',
+    isCorrect: true,
+    timeSpentSeconds: 45,
+    answeredAt: new Date(),
   };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnswersController],
       providers: [
-        {
-          provide: AnswersService,
-          useValue: mockAnswersService,
-        },
+        { provide: AnswersService, useValue: mockDeep<AnswersService>() },
       ],
     }).compile();
 
     controller = module.get<AnswersController>(AnswersController);
+    service = module.get(AnswersService);
   });
 
   afterEach(() => {
@@ -35,47 +44,30 @@ describe('AnswersController', () => {
   });
 
   describe('create', () => {
-    const newAnswerDto = {
-      userId: randomUUID(),
-      questionId: randomUUID(),
+    const newAnswerDto: CreateAnswerDto = {
+      userId: mockUserId,
+      questionId: mockQuestionId,
       selectedOption: 'A',
       textAnswer: 'Texto de exemplo',
       isCorrect: true,
       timeSpentSeconds: 45,
     };
 
-    it('deve lançar erro 400 se DTO for inválido', () => {
+    it('deve lançar BadRequestException se DTO for inválido', async () => {
       const invalidDto = {
         ...newAnswerDto,
         userId: 'not-a-uuid',
       };
-
-      const dtoInstance = plainToInstance(CreateAnswerDto, invalidDto);
-      const errors = validateSync(dtoInstance);
-      // espera que haja erro
-      expect(errors.length).toBeGreaterThan(0);
-
-      // e que esse erro seja na propriedade userId
-      expect(errors[0].property).toBe('userId');
-
-      // e que a constraint seja 'isUuid'
-      expect(errors[0].constraints).toHaveProperty('isUuid');
-
-      // opcional: checar a mensagem personalizada
-      expect(errors[0].constraints?.isUuid).toBe(
-        'O ID do usuário deve ser um UUID válido.',
-      );
+      await expect(controller.create(invalidDto as CreateAnswerDto, adminReq)).rejects.toThrow(BadRequestException);
     });
 
-    it('deve lançar erro 403 se não autenticado', async () => {
-      const req = { user: null } as unknown as AuthenticatedRequest;
-
-      await expect(controller.create(newAnswerDto, req)).rejects.toThrow(
-        ForbiddenException,
-      );
+    it('deve lançar ForbiddenException se não autenticado', async () => {
+      await expect(
+        controller.create(newAnswerDto, {} as AuthenticatedRequest),
+      ).rejects.toThrow(ForbiddenException);
     });
 
-    it('deve lançar erro 403 se STUDENT tentar responder por outro usuário', async () => {
+    it('deve lançar ForbiddenException se STUDENT tentar responder por outro usuário', async () => {
       await expect(
         controller.create(newAnswerDto, {
           user: { sub: randomUUID(), role: 'STUDENT' },
@@ -84,32 +76,28 @@ describe('AnswersController', () => {
     });
 
     it('deve criar uma resposta como ADMIN para qualquer usuário', async () => {
-      mockAnswersService.create.mockResolvedValue({
-        id: 'resposta-id',
-        ...newAnswerDto,
-      });
+      service.create.mockResolvedValue(mockAnswer);
 
       const result = await controller.create(newAnswerDto, adminReq);
 
       expect(result).toMatchObject({
-        id: 'resposta-id',
+        id: mockAnswer.id,
         userId: newAnswerDto.userId,
       });
-      expect(mockAnswersService.create).toHaveBeenCalledWith(newAnswerDto);
+      expect(service.create).toHaveBeenCalledWith(newAnswerDto);
     });
 
     it('deve criar uma resposta como STUDENT para si mesmo', async () => {
       const dto = { ...newAnswerDto, userId: studentReq.user.sub };
 
-      mockAnswersService.create.mockResolvedValue({
-        id: 'resposta-id',
-        ...dto,
-      });
+      service.create.mockResolvedValue(mockAnswer);
 
       const result = await controller.create(dto, studentReq);
 
-      expect(result).toHaveProperty('id', 'resposta-id');
-      expect(mockAnswersService.create).toHaveBeenCalledWith(dto);
+      expect(result).toHaveProperty('id', mockAnswer.id);
+      expect(service.create).toHaveBeenCalledWith(dto);
     });
   });
 });
+
+
