@@ -123,18 +123,29 @@ describe('LessonsController', () => {
     });
   });
 
-  describe('create', () => {
+  describe("create", () => {
     const dto: CreateLessonDto = {
-      title: 'New',
-      content: 'Content',
-      lessonType: 'EXERCISE',
-      videoUrl: 'url',
+      title: "New",
+      content: "Content",
+      lessonType: "EXERCISE",
+      videoUrl: "url",
       duration: 12,
       moduleId: mockModuleId,
       order: 2,
     };
 
-    it('throws ForbiddenException for student', async () => {
+    it("should throw BadRequestException for invalid data", async () => {
+      const invalidDto = {
+        title: "",
+        content: "",
+        lessonType: "INVALID" as any,
+        moduleId: "invalid-uuid",
+        duration: -1,
+      };
+      await expect(controller.create(invalidDto as CreateLessonDto, adminReq)).rejects.toThrow(BadRequestException);
+    });
+
+    it("throws ForbiddenException for student", async () => {
       await expect(controller.create(dto, studentReq)).rejects.toThrow(
         ForbiddenException,
       );
@@ -183,9 +194,19 @@ describe('LessonsController', () => {
     });
   });
 
-  describe('update', () => {
-    const updateDto = { title: 'Updated' };
-    it('throws ForbiddenException for student', async () => {
+  describe("update", () => {
+    const updateDto = { title: "Updated" };
+
+    it("should throw BadRequestException for invalid ID", async () => {
+      await expect(controller.update("invalid-id", updateDto, adminReq)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should throw BadRequestException for invalid data", async () => {
+      const invalidUpdateDto = { title: "", duration: -1 };
+      await expect(controller.update(mockLessonId, invalidUpdateDto as any, adminReq)).rejects.toThrow(BadRequestException);
+    });
+
+    it("throws ForbiddenException for student", async () => {
       service.findOne.mockResolvedValue(mockLesson); // simula achar a lição
       await expect(
         controller.update(mockLessonId, updateDto, studentReq),
@@ -208,8 +229,12 @@ describe('LessonsController', () => {
     });
   });
 
-  describe('remove', () => {
-    it('throws ForbiddenException for student', async () => {
+  describe("remove", () => {
+    it("should throw BadRequestException for invalid ID", async () => {
+      await expect(controller.remove("invalid-id", adminReq)).rejects.toThrow(BadRequestException);
+    });
+
+    it("throws ForbiddenException for student", async () => {
       service.findOne.mockResolvedValue(mockLesson);
       await expect(controller.remove(mockLessonId, studentReq)).rejects.toThrow(
         ForbiddenException,
