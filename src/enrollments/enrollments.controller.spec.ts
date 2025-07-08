@@ -53,8 +53,17 @@ describe('EnrollmentsController', () => {
     expect(service).toBeDefined();
   });
 
-  describe('create', () => {
-    it('should allow ADMIN to create enrollment', async () => {
+  describe("create", () => {
+    it("should throw BadRequestException if invalid data is provided", async () => {
+      const invalidDto = {
+        userId: "invalid-uuid",
+        courseId: "invalid-uuid",
+        status: "INVALID_STATUS",
+      };
+      await expect(controller.create(invalidDto as CreateEnrollmentDto, adminReq)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should allow ADMIN to create enrollment", async () => {
       const dto: CreateEnrollmentDto = {
         userId: mockUserId,
         courseId: mockCourseId,
@@ -157,8 +166,12 @@ describe('EnrollmentsController', () => {
     });
   });
 
-  describe('remove', () => {
-    it('should call service.remove for ADMIN', async () => {
+  describe("remove", () => {
+    it("should throw BadRequestException if invalid ID is provided", async () => {
+      await expect(controller.remove("invalid-id")).rejects.toThrow(BadRequestException);
+    });
+
+    it("should call service.remove for ADMIN", async () => {
       mockService.remove.mockResolvedValue(true);
 
       await controller.remove(mockEnrollmentId);
@@ -167,8 +180,15 @@ describe('EnrollmentsController', () => {
     });
   });
 
-  describe('update', () => {
-    it('should call service.update for ADMIN', async () => {
+  describe("update", () => {
+    it("should throw BadRequestException if invalid data is provided", async () => {
+      const invalidDto: Partial<UpdateEnrollmentDto> = {
+        status: "INVALID_STATUS" as EnrollmentStatus,
+      };
+      await expect(controller.update(mockEnrollmentId, invalidDto, adminReq)).rejects.toThrow(BadRequestException);
+    });
+
+    it("should call service.update for ADMIN", async () => {
       const updateDto: Partial<UpdateEnrollmentDto> = {
         status: EnrollmentStatus.COMPLETED,
       };

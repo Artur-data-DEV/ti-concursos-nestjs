@@ -86,7 +86,18 @@ describe('CoursesController', () => {
       isPublished: true,
     };
 
-    it('deve criar curso com sucesso (ADMIN)', async () => {
+    it("deve lançar BadRequestException se dados inválidos", async () => {
+      const invalidDto = {
+        title: "",
+        description: "",
+        instructorId: "invalid-uuid",
+        price: -1,
+      };
+
+      await expect(controller.create(invalidDto as CreateCourseDto, adminReq)).rejects.toThrow(BadRequestException);
+    });
+
+    it("deve criar curso com sucesso (ADMIN)", async () => {
       service.create.mockResolvedValue({ ...mockCourse, ...dto });
 
       const result = await controller.create(dto, adminReq);
