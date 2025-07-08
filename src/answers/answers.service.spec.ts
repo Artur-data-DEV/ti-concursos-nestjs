@@ -3,9 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnswersService } from './answers.service';
 import { randomUUID } from 'crypto';
-import { CreateAnswerDto } from './answers.dto';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { Answer } from '@prisma/client';
+import { CreateAnswerDto } from './create-answer.dto';
 
 describe('AnswersService', () => {
   let service: AnswersService;

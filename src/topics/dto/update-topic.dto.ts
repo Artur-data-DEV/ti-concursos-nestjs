@@ -1,4 +1,3 @@
-
 import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class UpdateTopicDto {
@@ -7,5 +6,3 @@ export class UpdateTopicDto {
   @MinLength(1, { message: 'O nome do tópico é obrigatório.' })
   name?: string;
 }
-
-

@@ -6,5 +6,3 @@ export class CreateTopicDto {
   @MinLength(1, { message: 'O nome do tópico é obrigatório.' })
   name: string;
 }
-
-

@@ -58,7 +58,10 @@ export class TopicsController {
   @Roles(UserRole.ADMIN)
   @Patch(':id')
   @UsePipes(new ValidationPipe({ transform: true }))
-  async update(@Param('id') id: string, @Body() updateTopicDto: UpdateTopicDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateTopicDto: UpdateTopicDto,
+  ) {
     try {
       return await this.topicsService.update(id, updateTopicDto);
     } catch (error) {
@@ -90,5 +93,3 @@ export class TopicsController {
     }
   }
 }
-
-

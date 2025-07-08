@@ -1,9 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  AttemptFilterDto,
-  CreateAnswerAttemptDto,
-} from './answer-attempts.dto';
+import { CreateAnswerAttemptDto } from './create-answer-attempt.dto';
+import { AttemptFilterDto } from './answer-attempts-filters.dto';
 
 @Injectable()
 export class AnswerAttemptsService {

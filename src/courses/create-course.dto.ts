@@ -1,4 +1,3 @@
-import { PartialType } from '@nestjs/mapped-types';
 import {
   IsString,
   IsOptional,
@@ -32,5 +31,3 @@ export class CreateCourseDto {
   @IsBoolean({ message: 'O campo "isPublished" deve ser um booleano.' })
   isPublished?: boolean;
 }
-
-export class UpdateCourseDto extends PartialType(CreateCourseDto) {}

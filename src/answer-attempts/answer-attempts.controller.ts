@@ -18,11 +18,9 @@ import { AnswerAttemptsService } from './answer-attempts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { Prisma } from '@prisma/client';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
-import {
-  AttemptFilterDto,
-  CreateAnswerAttemptDto,
-  UpdateAnswerAttemptDto,
-} from './answer-attempts.dto';
+import { CreateAnswerAttemptDto } from './create-answer-attempt.dto';
+import { UpdateAnswerAttemptDto } from './update-answer-attempt.dto';
+import { AttemptFilterDto } from './answer-attempts-filters.dto';
 
 @Controller('answer-attempts')
 export class AnswerAttemptsController {

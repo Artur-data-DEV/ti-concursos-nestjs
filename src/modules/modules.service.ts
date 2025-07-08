@@ -18,6 +18,24 @@ export class ModulesService {
     return this.prisma.module.findUnique({ where: { id } });
   }
 
+  async isTeacherOwnerOfModule(teacherId: string, moduleId: string) {
+    const module = await this.prisma.module.findUnique({
+      where: { id: moduleId },
+      select: {
+        course: {
+          include: {
+            instructor: {
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+    console.log('module', module?.course);
+    console.log(teacherId);
+    return module?.course.instructor.id === teacherId;
+  }
+
   async update(id: string, data: Prisma.ModuleUpdateInput) {
     return this.prisma.module.update({ where: { id }, data });
   }

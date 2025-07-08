@@ -18,5 +18,3 @@ export const professorReq = createMockRequest(UserRole.TEACHER);
 export const adminId = adminReq.user.sub;
 export const studentId = studentReq.user.sub;
 export const professorId = professorReq.user.sub;
-
-

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { FindQuestionsFiltersDto } from '../common/dto/filters.dto';
+import { FindQuestionsFiltersDto } from './favorite-questions-filter.dto';
 
 @Injectable()
 export class FavoriteQuestionsService {
