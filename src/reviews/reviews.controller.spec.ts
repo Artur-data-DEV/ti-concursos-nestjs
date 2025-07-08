@@ -303,10 +303,39 @@ describe('ReviewsController', () => {
     });
   });
 
+  describe("remove", () => {
     it("should throw BadRequestException for invalid ID", async () => {
       await expect(
         controller.remove("invalid-id", mockAuthenticatedAdminRequest),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it("should delete review for ADMIN", async () => {
+      mockPrismaService.review.findUnique.mockResolvedValue(
+        mockReview,
+      );
+      mockPrismaService.review.delete.mockResolvedValue(mockReview);
+
+      const result = await controller.remove(mockReviewId, mockAuthenticatedAdminRequest);
+
+      expect(result).toEqual({ message: "Review deleted" });
+      expect(mockPrismaService.review.delete).toHaveBeenCalledWith({
+        where: { id: mockReviewId },
+      });
+    });
+
+    it("should delete own review for STUDENT", async () => {
+      mockPrismaService.review.findUnique.mockResolvedValue(
+        mockReview,
+      );
+      mockPrismaService.review.delete.mockResolvedValue(mockReview);
+
+      const result = await controller.remove(mockReviewId, mockAuthenticatedStudentRequest);
+
+      expect(result).toEqual({ message: "Review deleted" });
+      expect(mockPrismaService.review.delete).toHaveBeenCalledWith({
+        where: { id: mockReviewId },
+      });
     });
 
     it("should throw ForbiddenException for STUDENT deleting other user review", async () => {
@@ -320,20 +349,6 @@ describe('ReviewsController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it("should delete review for ADMIN", async () => {
-      mockPrismaService.review.findUnique.mockResolvedValue(
-        mockReview,
-      );
-      mockPrismaService.review.delete.mockResolvedValue(mockReview);
-
-      const result = await controller.remove(mockReviewId);
-
-      expect(result).toEqual({ message: "Review deleted" });
-      expect(mockPrismaService.review.delete).toHaveBeenCalledWith({
-        where: { id: mockReviewId },
-      });
-    });
-
     it("should throw NotFoundException when review not found", async () => {
       mockPrismaService.review.findUnique.mockResolvedValue(null);
 
@@ -342,4 +357,3 @@ describe('ReviewsController', () => {
       ).rejects.toThrow(NotFoundException);
     });
   });
-});
