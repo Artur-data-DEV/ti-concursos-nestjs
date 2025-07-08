@@ -11,10 +11,12 @@ import {
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
 import { adminReq, studentReq, professorReq } from '../../__mocks__/user-mocks';
+import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 
 describe('TopicsController', () => {
   let controller: TopicsController;
-  let service: TopicsService;
+  let service: DeepMockProxy<TopicsService>;
+  let prismaService: DeepMockProxy<PrismaService>;
 
   const mockTopicId = randomUUID();
   const mockTopic = {
@@ -22,27 +24,18 @@ describe('TopicsController', () => {
     name: 'Test Topic',
   };
 
-  const mockPrismaService = {
-    topic: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TopicsController],
       providers: [
-        TopicsService,
-        { provide: PrismaService, useValue: mockPrismaService },
+        { provide: TopicsService, useValue: mockDeep<TopicsService>() },
+        { provide: PrismaService, useValue: mockDeep<PrismaService>() },
       ],
     }).compile();
 
     controller = module.get<TopicsController>(TopicsController);
-    service = module.get<TopicsService>(TopicsService);
+    service = module.get(TopicsService);
+    prismaService = module.get(PrismaService);
   });
 
   afterEach(() => {
@@ -55,16 +48,16 @@ describe('TopicsController', () => {
 
   describe('findAll', () => {
     it('should return a list of topics', async () => {
-      mockPrismaService.topic.findMany.mockResolvedValue([mockTopic]);
+      service.findAll.mockResolvedValue([mockTopic]);
 
       const result = await controller.findAll();
 
       expect(result).toEqual([mockTopic]);
-      expect(mockPrismaService.topic.findMany).toHaveBeenCalledTimes(1);
+      expect(service.findAll).toHaveBeenCalledTimes(1);
     });
 
     it('should apply filters when provided', async () => {
-      mockPrismaService.topic.findMany.mockResolvedValue([]);
+      service.findAll.mockResolvedValue([]);
 
       const filters = {
         name: 'filtered topic',
@@ -74,13 +67,11 @@ describe('TopicsController', () => {
 
       await controller.findAll(filters.name, filters.limit, filters.offset);
 
-      expect(mockPrismaService.topic.findMany).toHaveBeenCalledWith(
+      expect(service.findAll).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: {
-            name: { contains: filters.name, mode: 'insensitive' },
-          },
-          take: 10,
-          skip: 0,
+          name: filters.name,
+          limit: parseInt(filters.limit),
+          offset: parseInt(filters.offset),
         }),
       );
     });
@@ -88,18 +79,16 @@ describe('TopicsController', () => {
 
   describe('findOne', () => {
     it('should return topic by ID', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
+      service.findOne.mockResolvedValue(mockTopic);
 
       const result = await controller.findOne(mockTopicId);
 
       expect(result).toEqual(mockTopic);
-      expect(mockPrismaService.topic.findUnique).toHaveBeenCalledWith({
-        where: { id: mockTopicId },
-      });
+      expect(service.findOne).toHaveBeenCalledWith(mockTopicId);
     });
 
     it('should throw NotFoundException when topic not found', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(null);
+      service.findOne.mockResolvedValue(null);
 
       await expect(controller.findOne(randomUUID())).rejects.toThrow(
         NotFoundException,
@@ -120,14 +109,12 @@ describe('TopicsController', () => {
 
     it('should create topic for ADMIN', async () => {
       const createdTopic = { id: randomUUID(), ...createTopicDto };
-      mockPrismaService.topic.create.mockResolvedValue(createdTopic);
+      service.create.mockResolvedValue(createdTopic);
 
       const result = await controller.create(createTopicDto, adminReq);
 
       expect(result).toEqual(createdTopic);
-      expect(mockPrismaService.topic.create).toHaveBeenCalledWith({
-        data: createTopicDto,
-      });
+      expect(service.create).toHaveBeenCalledWith(createTopicDto);
     });
 
     it('should throw BadRequestException for invalid data', async () => {
@@ -155,16 +142,13 @@ describe('TopicsController', () => {
 
     it('should update topic for ADMIN', async () => {
       const updatedTopic = { ...mockTopic, ...updateDto };
-      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
-      mockPrismaService.topic.update.mockResolvedValue(updatedTopic);
+      service.findOne.mockResolvedValue(mockTopic);
+      service.update.mockResolvedValue(updatedTopic);
 
       const result = await controller.update(mockTopicId, updateDto, adminReq);
 
       expect(result).toEqual(updatedTopic);
-      expect(mockPrismaService.topic.update).toHaveBeenCalledWith({
-        where: { id: mockTopicId },
-        data: updateDto,
-      });
+      expect(service.update).toHaveBeenCalledWith(mockTopicId, updateDto);
     });
 
     it('should throw BadRequestException for invalid data', async () => {
@@ -181,7 +165,7 @@ describe('TopicsController', () => {
     });
 
     it('should throw ForbiddenException for PROFESSOR', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
+      service.findOne.mockResolvedValue(mockTopic);
 
       await expect(
         controller.update(mockTopicId, updateDto, professorReq),
@@ -189,7 +173,7 @@ describe('TopicsController', () => {
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
+      service.findOne.mockResolvedValue(mockTopic);
 
       await expect(
         controller.update(mockTopicId, updateDto, studentReq),
@@ -199,15 +183,13 @@ describe('TopicsController', () => {
 
   describe('remove', () => {
     it('should delete topic for ADMIN', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
-      mockPrismaService.topic.delete.mockResolvedValue(mockTopic);
+      service.findOne.mockResolvedValue(mockTopic);
+      service.remove.mockResolvedValue(mockTopic);
 
       const result = await controller.remove(mockTopicId, adminReq);
 
       expect(result).toEqual({ message: 'Tópico deletado com sucesso.' });
-      expect(mockPrismaService.topic.delete).toHaveBeenCalledWith({
-        where: { id: mockTopicId },
-      });
+      expect(service.remove).toHaveBeenCalledWith(mockTopicId);
     });
 
     it('should throw BadRequestException for invalid ID', async () => {
@@ -217,7 +199,7 @@ describe('TopicsController', () => {
     });
 
     it('should throw ForbiddenException for PROFESSOR', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
+      service.findOne.mockResolvedValue(mockTopic);
 
       await expect(
         controller.remove(mockTopicId, professorReq),
@@ -225,7 +207,7 @@ describe('TopicsController', () => {
     });
 
     it('should throw ForbiddenException for STUDENT', async () => {
-      mockPrismaService.topic.findUnique.mockResolvedValue(mockTopic);
+      service.findOne.mockResolvedValue(mockTopic);
 
       await expect(controller.remove(mockTopicId, studentReq)).rejects.toThrow(
         ForbiddenException,
@@ -233,3 +215,5 @@ describe('TopicsController', () => {
     });
   });
 });
+
+
