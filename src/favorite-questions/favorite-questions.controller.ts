@@ -25,7 +25,7 @@ import {
 } from './favorite-questions.dto';
 import { ParseUUIDPipe } from '@nestjs/common';
 import { isUUID } from 'class-validator';
-import { FindQuestionsFiltersDto } from '../common/dto/filters.dto';
+import { FindQuestionsFiltersDto } from './favorite-questions-filter.dto';
 
 @Controller('favorite-questions')
 export class FavoriteQuestionsController {

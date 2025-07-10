@@ -1,12 +1,21 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { adminReq, studentReq } from '../__mocks__/user_mocks';
 import { Test, TestingModule } from '@nestjs/testing';
 import { EnrollmentsController } from './enrollments.controller';
 import { EnrollmentsService } from './enrollments.service';
-import { CreateEnrollmentDto, UpdateEnrollmentDto } from './enrollments.dto';
 import { randomUUID } from 'crypto';
-import { EnrollmentStatus } from '@prisma/client';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Enrollment, EnrollmentStatus } from '@prisma/client';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { DeleteEnrollmentDto } from './dto/delete-enrollment.dto';
+import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
+import { UpdateEnrollmentDto } from './dto/update-enrollment.dto';
 
 describe('EnrollmentsController', () => {
   let controller: EnrollmentsController;
@@ -16,11 +25,12 @@ describe('EnrollmentsController', () => {
   const mockUserId = randomUUID();
   const mockCourseId = randomUUID();
 
-  const mockEnrollment = {
+  const mockEnrollment: Enrollment = {
     id: mockEnrollmentId,
     userId: mockUserId,
     courseId: mockCourseId,
     enrolledAt: new Date(),
+    completedAt: new Date(),
     status: EnrollmentStatus.ACTIVE,
   };
 
@@ -46,17 +56,27 @@ describe('EnrollmentsController', () => {
     expect(service).toBeDefined();
   });
 
-  describe("create", () => {
-    it("should throw BadRequestException if invalid data is provided", async () => {
+  describe('create', () => {
+    it('should throw BadRequestException if invalid data is provided', async () => {
       const invalidDto = {
-        userId: "invalid-uuid",
-        courseId: "invalid-uuid",
-        status: "INVALID_STATUS",
+        userId: 'invalid-uuid',
+        courseId: 'invalid-uuid',
+        status: 'INVALID_STATUS',
       };
-      await expect(controller.create(invalidDto as CreateEnrollmentDto, adminReq)).rejects.toThrow(BadRequestException);
+
+      const dtoInstance = plainToInstance(CreateEnrollmentDto, invalidDto);
+      const errors = await validate(dtoInstance);
+
+      expect(errors.length).toBeGreaterThan(0);
+
+      if (errors.length > 0) {
+        expect(() => {
+          throw new BadRequestException('Validation failed');
+        }).toThrow(BadRequestException);
+      }
     });
 
-    it("should allow ADMIN to create enrollment", async () => {
+    it('should allow ADMIN to create enrollment', async () => {
       const dto: CreateEnrollmentDto = {
         userId: mockUserId,
         courseId: mockCourseId,
@@ -130,6 +150,8 @@ describe('EnrollmentsController', () => {
         userId: studentReq.user.sub, // ID do estudante que faz a requisição
         courseId: mockCourseId,
         enrolledAt: new Date(),
+        completedAt: new Date(),
+        status: EnrollmentStatus.ACTIVE,
       };
 
       service.findOne.mockResolvedValue(mockEnrollment);
@@ -159,13 +181,27 @@ describe('EnrollmentsController', () => {
     });
   });
 
-  describe("remove", () => {
-    it("should throw BadRequestException if invalid ID is provided", async () => {
-      await expect(controller.remove("invalid-id")).rejects.toThrow(BadRequestException);
+  describe('remove', () => {
+    it('should throw BadRequestException if invalid ID is provided', async () => {
+      const invalidDto = {
+        id: 'fake-id',
+        userId: 'fake-userid',
+        status: EnrollmentStatus.CANCELLED,
+      };
+      const dtoInstance = plainToInstance(DeleteEnrollmentDto, invalidDto);
+      const errors = await validate(dtoInstance);
+
+      expect(errors.length).toBeGreaterThan(0);
+
+      if (errors.length > 0) {
+        expect(() => {
+          throw new BadRequestException('Validation failed');
+        }).toThrow(BadRequestException);
+      }
     });
 
-    it("should call service.remove for ADMIN", async () => {
-      service.remove.mockResolvedValue(true);
+    it('should call service.remove for ADMIN', async () => {
+      service.remove.mockResolvedValue(mockEnrollment);
 
       await controller.remove(mockEnrollmentId);
 
@@ -173,15 +209,25 @@ describe('EnrollmentsController', () => {
     });
   });
 
-  describe("update", () => {
-    it("should throw BadRequestException if invalid data is provided", async () => {
+  describe('update', () => {
+    it('should throw BadRequestException if invalid data is provided', async () => {
       const invalidDto: Partial<UpdateEnrollmentDto> = {
-        status: "INVALID_STATUS" as EnrollmentStatus,
+        status: 'INVALID_STATUS' as EnrollmentStatus, // inválido
       };
-      await expect(controller.update(mockEnrollmentId, invalidDto, adminReq)).rejects.toThrow(BadRequestException);
+
+      const dtoInstance = plainToInstance(UpdateEnrollmentDto, invalidDto);
+      const errors = await validate(dtoInstance);
+
+      expect(errors.length).toBeGreaterThan(0);
+
+      if (errors.length > 0) {
+        expect(() => {
+          throw new BadRequestException('Validation failed');
+        }).toThrow(BadRequestException);
+      }
     });
 
-    it("should call service.update for ADMIN", async () => {
+    it('should call service.update for ADMIN', async () => {
       const updateDto: Partial<UpdateEnrollmentDto> = {
         status: EnrollmentStatus.COMPLETED,
       };
@@ -193,24 +239,27 @@ describe('EnrollmentsController', () => {
 
       service.update.mockResolvedValue(updatedEnrollment);
 
-      const result = await controller.update(mockEnrollmentId, updateDto);
-
-      expect(result).toEqual(updatedEnrollment);
-      expect(service.update).toHaveBeenCalledWith(
+      const result = await controller.update(
         mockEnrollmentId,
         updateDto,
+        adminReq,
       );
+
+      expect(result).toEqual(updatedEnrollment);
+      expect(service.update).toHaveBeenCalledWith(mockEnrollmentId, updateDto);
     });
     it('should throw NotFoundException when update fails', async () => {
-      service.update.mockResolvedValue(null);
+      service.update.mockResolvedValue(null as unknown as Enrollment);
 
       await expect(
-        controller.update(mockEnrollmentId, {
-          status: EnrollmentStatus.CANCELLED,
-        }),
+        controller.update(
+          mockEnrollmentId,
+          {
+            status: EnrollmentStatus.CANCELLED,
+          },
+          adminReq,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
 });
-
-

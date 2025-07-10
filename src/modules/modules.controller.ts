@@ -7,7 +7,6 @@ import {
   Param,
   Delete,
   UseGuards,
-  ParseUUIDPipe,
   HttpCode,
   HttpStatus,
   BadRequestException,
@@ -23,6 +22,7 @@ import { Module, UserRole } from '@prisma/client';
 import { CreateModuleDto } from './dto/create-module.dto';
 import { UpdateModuleDto } from './dto/update-module.dto';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
+import { ParseCuidPipe } from '../common/pipes/parse-cuid.pipe';
 
 @Controller('modules')
 export class ModulesController {
@@ -60,7 +60,7 @@ export class ModulesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.STUDENT, UserRole.TEACHER)
   @Get(':id')
-  async findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Module> {
+  async findOne(@Param('id', ParseCuidPipe) id: string): Promise<Module> {
     const module = await this.modulesService.findOne(id);
 
     if (!module) {
@@ -74,7 +74,7 @@ export class ModulesController {
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Patch(':id')
   async update(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseCuidPipe) id: string,
     @Body() updateModuleDto: UpdateModuleDto,
     @Req() req: AuthenticatedRequest,
   ): Promise<Module> {
@@ -101,7 +101,7 @@ export class ModulesController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   async remove(
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id', ParseCuidPipe) id: string,
     @Req() req: AuthenticatedRequest,
   ): Promise<{ message: string }> {
     const user = req.user;

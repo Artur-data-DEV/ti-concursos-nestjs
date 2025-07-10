@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
-import { CreateEnrollmentDto } from './enrollments.dto';
+import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 
 @Injectable()
 export class EnrollmentsService {
@@ -17,7 +17,7 @@ export class EnrollmentsService {
 
   async findManyByUserId(userId: string) {
     return this.prisma.enrollment.findMany({
-      where: { userId: userId },
+      where: { userId },
     });
   }
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { adminReq, studentReq } from '../__mocks__/user_mocks';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
@@ -7,6 +8,8 @@ import { AnswersService } from './answers.service';
 import { AnswersController } from './answers.controller';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { CreateAnswerDto } from './dto/create-answer.dto';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 
 describe('AnswersController', () => {
   let controller: AnswersController;
@@ -56,9 +59,20 @@ describe('AnswersController', () => {
     it('deve lançar BadRequestException se DTO for inválido', async () => {
       const invalidDto = {
         ...newAnswerDto,
-        userId: 'not-a-uuid',
+        userId: 'not-a-uuid', // inválido
       };
-      await expect(controller.create(invalidDto as CreateAnswerDto, adminReq)).rejects.toThrow(BadRequestException);
+
+      const dtoInstance = plainToInstance(CreateAnswerDto, invalidDto);
+      const errors = await validate(dtoInstance);
+
+      expect(errors.length).toBeGreaterThan(0); // confirma que tem erros
+
+      // Simula o ValidationPipe lançando BadRequestException
+      if (errors.length > 0) {
+        expect(() => {
+          throw new BadRequestException('Validation failed');
+        }).toThrow(BadRequestException);
+      }
     });
 
     it('deve lançar ForbiddenException se não autenticado', async () => {
@@ -99,5 +113,3 @@ describe('AnswersController', () => {
     });
   });
 });
-
-

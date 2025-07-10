@@ -18,7 +18,8 @@ import { RolesGuard } from '../auth/roles.guard/roles.guard';
 import { Roles } from '../auth/roles.decorator/roles.decorator';
 import { UserRole, EnrollmentStatus } from '@prisma/client';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
-import { CreateEnrollmentDto, UpdateEnrollmentDto } from './enrollments.dto';
+import { UpdateEnrollmentDto } from './dto/update-enrollment.dto';
+import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 
 @Controller('enrollments')
 export class EnrollmentsController {
@@ -89,11 +90,16 @@ export class EnrollmentsController {
   async update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateEnrollmentDto: UpdateEnrollmentDto,
+    @Request() req: AuthenticatedRequest,
   ) {
+    if (req.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException('Não autorizado.');
+    }
     const updated = await this.enrollmentsService.update(
       id,
       updateEnrollmentDto,
     );
+    console.log(updated, 'que ta sendo atualizado');
     if (!updated) {
       throw new NotFoundException('Matrícula não encontrada');
     }

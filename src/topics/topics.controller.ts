@@ -7,12 +7,12 @@ import {
   Param,
   Delete,
   UseGuards,
-  Request,
   Query,
-  BadRequestException,
   NotFoundException,
   UsePipes,
   ValidationPipe,
+  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { TopicsService } from './topics.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
@@ -22,6 +22,7 @@ import { UserRole } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { CreateTopicDto } from './dto/create-topic.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
+import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 
 @Controller('topics')
 export class TopicsController {
@@ -33,7 +34,7 @@ export class TopicsController {
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
   ) {
-    return this.topicsService.findAll(name, limit, offset);
+    return this.topicsService.findAll({ name, limit, offset });
   }
 
   @Get(':id')
@@ -50,7 +51,16 @@ export class TopicsController {
   @Roles(UserRole.ADMIN)
   @Post()
   @UsePipes(new ValidationPipe({ transform: true }))
-  async create(@Body() createTopicDto: CreateTopicDto) {
+  async create(
+    @Body() createTopicDto: CreateTopicDto,
+    req: AuthenticatedRequest,
+  ) {
+    if (!createTopicDto.name) {
+      throw new BadRequestException('Nome obrigatório');
+    }
+    if (!req.user) {
+      throw new ForbiddenException('Não autenticado.');
+    }
     return this.topicsService.create(createTopicDto);
   }
 

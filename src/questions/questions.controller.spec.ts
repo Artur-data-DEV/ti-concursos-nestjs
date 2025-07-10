@@ -352,5 +352,3 @@ describe('QuestionsController', () => {
     });
   });
 });
-
-

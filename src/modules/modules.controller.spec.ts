@@ -2,7 +2,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ModulesController } from './modules.controller';
 import { ModulesService } from './modules.service';
-import { randomUUID } from 'crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -11,14 +10,14 @@ import {
 import { adminReq, studentReq } from '../../__mocks__/user-mocks';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { Module } from '@prisma/client';
-import { isUUID } from 'class-validator';
+import { createId } from '@paralleldrive/cuid2';
 
 describe('ModulesController', () => {
   let controller: ModulesController;
   let service: DeepMockProxy<ModulesService>;
 
-  const mockModuleId = randomUUID();
-  const mockCourseId = randomUUID();
+  const mockModuleId = createId();
+  const mockCourseId = createId();
 
   const mockModule: Module = {
     id: mockModuleId,
@@ -68,22 +67,6 @@ describe('ModulesController', () => {
       await expect(controller.findOne(mockModuleId)).rejects.toThrow(
         NotFoundException,
       );
-    });
-
-    it('should throw BadRequestException for invalid UUID', async () => {
-      const invalidId = 'invalid-uuid';
-
-      service.findOne.mockResolvedValue(null as unknown as Module); // Precisa mockar mesmo que não seja chamado
-
-      // Simule manualmente como se o pipe tivesse rodado
-      try {
-        if (!isUUID(invalidId))
-          throw new BadRequestException('Validation failed (uuid is expected)');
-        await controller.findOne(invalidId);
-        fail('Should have thrown BadRequestException');
-      } catch (err) {
-        expect(err).toBeInstanceOf(BadRequestException);
-      }
     });
   });
 
@@ -142,12 +125,6 @@ describe('ModulesController', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should throw BadRequestException for invalid UUID', async () => {
-      await expect(
-        controller.update('invalid-uuid', updateDto, adminReq),
-      ).rejects.toThrow(BadRequestException);
-    });
-
     it('should throw BadRequestException for invalid data', async () => {
       service.findOne.mockResolvedValue(mockModule);
       service.update.mockRejectedValue(
@@ -179,12 +156,6 @@ describe('ModulesController', () => {
       service.findOne.mockResolvedValue(mockModule);
       await expect(controller.remove(mockModuleId, studentReq)).rejects.toThrow(
         ForbiddenException,
-      );
-    });
-
-    it('should throw BadRequestException for invalid UUID', async () => {
-      await expect(controller.remove('invalid-uuid', adminReq)).rejects.toThrow(
-        BadRequestException,
       );
     });
   });

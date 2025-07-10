@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { TopicsController } from './topics.controller';
 import { TopicsService } from './topics.service';
@@ -12,16 +13,19 @@ import { CreateTopicDto } from './dto/create-topic.dto';
 import { UpdateTopicDto } from './dto/update-topic.dto';
 import { adminReq, studentReq, professorReq } from '../../__mocks__/user-mocks';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
+import { Topic } from '@prisma/client';
 
 describe('TopicsController', () => {
   let controller: TopicsController;
   let service: DeepMockProxy<TopicsService>;
-  let prismaService: DeepMockProxy<PrismaService>;
 
   const mockTopicId = randomUUID();
-  const mockTopic = {
+  const mockTopic: Topic = {
     id: mockTopicId,
     name: 'Test Topic',
+    description: 'This is a test topic',
+    createdAt: new Date(),
+    updatedAt: new Date(),
   };
 
   beforeEach(async () => {
@@ -35,7 +39,6 @@ describe('TopicsController', () => {
 
     controller = module.get<TopicsController>(TopicsController);
     service = module.get(TopicsService);
-    prismaService = module.get(PrismaService);
   });
 
   afterEach(() => {
@@ -215,5 +218,3 @@ describe('TopicsController', () => {
     });
   });
 });
-
-

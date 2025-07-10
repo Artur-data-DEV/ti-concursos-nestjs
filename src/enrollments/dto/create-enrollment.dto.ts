@@ -12,17 +12,3 @@ export class CreateEnrollmentDto {
   @IsEnum(EnrollmentStatus)
   status?: EnrollmentStatus;
 }
-
-export class UpdateEnrollmentDto {
-  @IsOptional()
-  @IsUUID()
-  userId?: string;
-
-  @IsOptional()
-  @IsUUID()
-  courseId?: string;
-
-  @IsOptional()
-  @IsEnum(EnrollmentStatus)
-  status?: EnrollmentStatus;
-}
