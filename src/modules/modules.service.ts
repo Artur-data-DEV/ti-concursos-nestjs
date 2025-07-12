@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { CreateModuleDto } from './dto/create-module.dto';
@@ -16,8 +20,20 @@ export class ModulesService {
         connect: { id: dto.courseId },
       },
     };
-
-    return this.prisma.module.create({ data });
+    try {
+      const createdModule = await this.prisma.module.create({ data });
+      return createdModule;
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Já existe um módulo com essa ordem neste curso.',
+        );
+      }
+      throw error;
+    }
   }
 
   async findAll() {
@@ -53,13 +69,28 @@ export class ModulesService {
   }
 
   async update(id: string, data: Prisma.ModuleUpdateInput) {
-    // Verifica se módulo existe antes de atualizar
-    await this.findOne(id);
+    const existingModule = await this.findOne(id);
+
+    if (data.order !== undefined) {
+      const conflictModule = await this.prisma.module.findFirst({
+        where: {
+          courseId: existingModule.courseId,
+          order: data.order as number,
+          NOT: { id },
+        },
+      });
+
+      if (conflictModule) {
+        throw new ConflictException(
+          'Já existe um módulo com essa ordem neste curso.',
+        );
+      }
+    }
+
     return this.prisma.module.update({ where: { id }, data });
   }
 
   async remove(id: string) {
-    // Verifica se módulo existe antes de deletar
     await this.findOne(id);
     return this.prisma.module.delete({ where: { id } });
   }

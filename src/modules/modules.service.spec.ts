@@ -7,6 +7,7 @@ import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { NotFoundException } from '@nestjs/common';
 import { CreateModuleDto } from './dto/create-module.dto';
 import { Module, Prisma } from '@prisma/client';
+import { createId } from '@paralleldrive/cuid2';
 
 describe('ModulesService', () => {
   let service: ModulesService;
@@ -43,7 +44,7 @@ describe('ModulesService', () => {
       };
 
       const createdModule: Module = {
-        id: 'module-uuid',
+        id: createId(),
         title: dto.title,
         courseId: dto.courseId,
         description: dto.description ?? null,
@@ -60,6 +61,7 @@ describe('ModulesService', () => {
         data: expectedPrismaInput,
       });
       expect(result).toEqual(createdModule);
+      expect(result.id).toMatch(/^[a-z0-9]{20,25}$/);
     });
   });
 

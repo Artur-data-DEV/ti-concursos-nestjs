@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
@@ -9,8 +10,8 @@ jest.mock('bcryptjs');
 
 describe('AuthService', () => {
   let service: AuthService;
-  let usersService: UsersService;
-  let jwtService: JwtService;
+  let usersService: jest.Mocked<UsersService>;
+  let jwtService: jest.Mocked<JwtService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -33,8 +34,8 @@ describe('AuthService', () => {
     }).compile();
 
     service = module.get<AuthService>(AuthService);
-    usersService = module.get<UsersService>(UsersService);
-    jwtService = module.get<JwtService>(JwtService);
+    usersService = module.get(UsersService);
+    jwtService = module.get(JwtService);
   });
 
   it('should be defined', () => {
@@ -42,17 +43,18 @@ describe('AuthService', () => {
   });
 
   describe('validateUser', () => {
-    it('should return user if password matches', async () => {
+    it('should return user data without secure if password matches', async () => {
       const user = {
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
         secure: { password: 'hashedPassword' },
       };
-      (usersService.findOneByEmail as jest.Mock).mockResolvedValue(user);
+      usersService.findOneByEmail.mockResolvedValue(user as any);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.validateUser('test@example.com', 'password');
+
       expect(result).toEqual({
         id: user.id,
         email: user.email,
@@ -67,32 +69,35 @@ describe('AuthService', () => {
         name: 'Test User',
         secure: { password: 'hashedPassword' },
       };
-      (usersService.findOneByEmail as jest.Mock).mockResolvedValue(user);
+      usersService.findOneByEmail.mockResolvedValue(user as any);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       const result = await service.validateUser('test@example.com', 'password');
+
       expect(result).toBeNull();
     });
 
     it('should return null if user not found', async () => {
-      (usersService.findOneByEmail as jest.Mock).mockResolvedValue(null);
+      usersService.findOneByEmail.mockResolvedValue(null);
 
       const result = await service.validateUser('test@example.com', 'password');
+
       expect(result).toBeNull();
     });
   });
 
   describe('login', () => {
-    it('should return access_token', async () => {
+    it('should return access_token with correct payload', () => {
       const user = {
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
         role: 'STUDENT',
       };
-      (jwtService.sign as jest.Mock).mockReturnValue('mockAccessToken');
+      jwtService.sign.mockReturnValue('mockAccessToken');
 
-      const result = await service.login(user);
+      const result = service.login(user as any);
+
       expect(result).toEqual({ access_token: 'mockAccessToken' });
       expect(jwtService.sign).toHaveBeenCalledWith({
         email: user.email,

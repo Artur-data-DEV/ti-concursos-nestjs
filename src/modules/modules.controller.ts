@@ -13,6 +13,7 @@ import {
   ForbiddenException,
   NotFoundException,
   Req,
+  ConflictException,
 } from '@nestjs/common';
 import { ModulesService } from './modules.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
@@ -31,6 +32,7 @@ export class ModulesController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Post()
+  @Post()
   async create(
     @Body() createModuleDto: CreateModuleDto,
     @Req() req: AuthenticatedRequest,
@@ -46,7 +48,11 @@ export class ModulesController {
     try {
       return await this.modulesService.create(createModuleDto);
     } catch (error) {
-      throw new BadRequestException(error);
+      if (error instanceof ConflictException) {
+        // Passa direto o conflito
+        throw error;
+      }
+      throw new BadRequestException('Error creating module');
     }
   }
 

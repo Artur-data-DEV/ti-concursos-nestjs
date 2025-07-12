@@ -8,6 +8,7 @@ import { CreateModuleDto } from '../src/modules/dto/create-module.dto';
 import { Server } from 'http';
 import { getTokenForUser } from '../src/__mocks__/utils/auth.helper';
 import { createId as cuid } from '@paralleldrive/cuid2';
+import { randomUUID } from 'crypto';
 
 describe('ModulesController (e2e)', () => {
   let app: INestApplication;
@@ -19,7 +20,6 @@ describe('ModulesController (e2e)', () => {
   let teacherToken: string;
   let moduleId: string;
   let validCourseId: string;
-  let randomModuleCuid: string;
 
   beforeAll(async () => {
     const moduleFixture = await Test.createTestingModule({
@@ -34,11 +34,12 @@ describe('ModulesController (e2e)', () => {
     server = app.getHttpServer() as Server;
     prisma = app.get(PrismaService);
 
-    // Limpa os dados
+    // Limpa dados anteriores
     await prisma.module.deleteMany();
     await prisma.course.deleteMany();
     await prisma.user.deleteMany();
 
+    // Gera tokens
     const { token: adminTokenObj } = await getTokenForUser(
       prisma,
       UserRole.ADMIN,
@@ -79,7 +80,18 @@ describe('ModulesController (e2e)', () => {
 
     validCourseId = course.id;
     expect(validCourseId).toBeDefined();
-    randomModuleCuid = cuid();
+
+    // Cria módulo base com order = 1 para teste de duplicidade
+    const baseModule = await prisma.module.create({
+      data: {
+        title: 'Base Module',
+        description: 'Base Module Description',
+        order: 1,
+        courseId: validCourseId,
+      },
+    });
+    moduleId = baseModule.id;
+    expect(moduleId).toBeDefined();
   });
 
   afterAll(async () => {
@@ -93,9 +105,25 @@ describe('ModulesController (e2e)', () => {
     const validDto: CreateModuleDto = {
       title: 'New Module',
       description: 'Module Description',
-      order: 1,
-      courseId: '',
+      order: 2, // order diferente do base (1)
+      courseId: '', // será sobrescrito no teste
     };
+
+    it('should return 400 when required fields are missing', async () => {
+      await request(server)
+        .post('/modules')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({}) // campos ausentes
+        .expect(400);
+    });
+
+    it('should return 409 when module order is duplicated', async () => {
+      await request(server)
+        .post('/modules')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ...validDto, courseId: validCourseId, order: 1 }) // order duplicado com baseModule
+        .expect(409);
+    });
 
     it('should create a module (ADMIN)', async () => {
       const res = await request(server)
@@ -106,23 +134,29 @@ describe('ModulesController (e2e)', () => {
 
       const createdModule = res.body as Module;
       expect(createdModule).toHaveProperty('id');
-      moduleId = createdModule.id;
-      expect(moduleId).toBeDefined();
+      expect(createdModule.order).toBe(validDto.order);
     });
 
     it('should create a module (TEACHER)', async () => {
-      await request(server)
+      const res = await request(server)
         .post('/modules')
         .set('Authorization', `Bearer ${teacherToken}`)
-        .send({ ...validDto, courseId: validCourseId })
+        .send({
+          ...validDto,
+          courseId: validCourseId,
+          order: 3, // ordem diferente
+          title: 'Teacher Module',
+        })
         .expect(201);
+
+      expect(res.body).toHaveProperty('id');
     });
 
     it('should forbid STUDENT from creating module', async () => {
       await request(server)
         .post('/modules')
         .set('Authorization', `Bearer ${studentToken}`)
-        .send({ ...validDto, courseId: validCourseId })
+        .send({ ...validDto, courseId: validCourseId, order: 4 })
         .expect(403);
     });
 
@@ -134,7 +168,17 @@ describe('ModulesController (e2e)', () => {
           title: '',
           description: '',
           order: -1,
-          courseId: 'invalid',
+          courseId: 'invalid-id',
+        })
+        .expect(400);
+      await request(server)
+        .post('/modules')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          title: '',
+          description: '',
+          order: -1,
+          courseId: randomUUID(), // ID inválido - formato UUID incompatível com banco (CUIDv2)
         })
         .expect(400);
     });
@@ -147,7 +191,11 @@ describe('ModulesController (e2e)', () => {
         .set('Authorization', `Bearer ${studentToken}`)
         .expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
+      const modules = res.body as Module[];
+      expect(Array.isArray(modules)).toBe(true);
+      expect(modules.length).toBeGreaterThan(0);
+      expect(modules[0]).toHaveProperty('id');
+      expect(modules[0]).toHaveProperty('title');
     });
   });
 
@@ -165,7 +213,7 @@ describe('ModulesController (e2e)', () => {
 
     it('should return 404 if not found', async () => {
       await request(server)
-        .get(`/modules/${randomModuleCuid}`)
+        .get(`/modules/${cuid()}`)
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(404);
     });
@@ -190,6 +238,14 @@ describe('ModulesController (e2e)', () => {
 
       const body = res.body as Module;
       expect(body.title).toBe('Updated Title');
+    });
+
+    it('should return 400 on invalid data in update', async () => {
+      await request(server)
+        .patch(`/modules/${moduleId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ order: -100 }) // inválido
+        .expect(400);
     });
 
     it('should forbid STUDENT from updating', async () => {
@@ -225,7 +281,7 @@ describe('ModulesController (e2e)', () => {
         data: {
           title: 'Temp Module',
           description: 'To be deleted',
-          order: 99,
+          order: 100,
           courseId: validCourseId,
         },
       });
