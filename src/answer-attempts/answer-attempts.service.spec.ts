@@ -5,7 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { randomUUID } from 'crypto';
-import { AttemptFilterDto } from './dto/answer-attempts-filters.dto';
+import {
+  AttemptFilterDto,
+  FindAttemptFilterDto,
+} from './dto/answer-attempts-filters.dto';
 
 describe('AnswerAttemptsService', () => {
   let service: AnswerAttemptsService;
@@ -53,7 +56,7 @@ describe('AnswerAttemptsService', () => {
       const filters: AttemptFilterDto = {
         userId,
         questionId: 'question-id',
-        isCorrect: 'true',
+        isCorrect: true,
         limit: 5,
         offset: 0,
       };
@@ -80,7 +83,7 @@ describe('AnswerAttemptsService', () => {
     it('deve funcionar com filtros parciais', async () => {
       prisma.answerAttempt.findMany.mockResolvedValue([mockAttempt]);
 
-      const filters: AttemptFilterDto = {
+      const filters: FindAttemptFilterDto = {
         userId,
       };
 
@@ -106,7 +109,7 @@ describe('AnswerAttemptsService', () => {
 
       expect(prisma.answerAttempt.findUnique).toHaveBeenCalledWith({
         where: { id: attemptId },
-        include: { answer: { select: { userId: true } } },
+        include: { answer: true },
       });
 
       expect(result).toEqual(mockAttempt);

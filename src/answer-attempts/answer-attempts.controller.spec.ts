@@ -6,12 +6,10 @@ import {
   studentReq,
 } from '../__mocks__/user_mocks';
 import { Test, TestingModule } from '@nestjs/testing';
-import { randomUUID } from 'crypto';
 import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import { AnswerAttemptsController } from './answer-attempts.controller';
 import { AuthenticatedRequest } from '../common/interfaces/authenticated-request.interface';
@@ -21,15 +19,16 @@ import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { UpdateAnswerAttemptDto } from './dto/update-answer-attempt.dto';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { createId } from '@paralleldrive/cuid2';
 
 describe('AnswerAttemptsController', () => {
   let controller: AnswerAttemptsController;
   let service: DeepMockProxy<AnswerAttemptsService>;
 
   // IDs de exemplo para mocks
-  const questionId = randomUUID();
-  const attemptId = randomUUID();
-  const answerId = randomUUID();
+  const questionId = createId();
+  const attemptId = createId();
+  const answerId = createId();
 
   // Mock de tentativa de resposta com estrutura compatível com seu service
   const mockAnswerAttempt = {
@@ -39,7 +38,7 @@ describe('AnswerAttemptsController', () => {
     timeSpent: 120,
     attemptAt: new Date(),
     answer: {
-      id: randomUUID(),
+      id: createId(),
       isCorrect: null,
       userId: studentId,
       questionId,
@@ -81,7 +80,7 @@ describe('AnswerAttemptsController', () => {
 
     it('deve lançar ForbiddenException para STUDENT acessando tentativas de outro user', async () => {
       await expect(
-        controller.findAll(studentReq, { userId: randomUUID() }),
+        controller.findAll(studentReq, { userId: createId() }),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -99,7 +98,7 @@ describe('AnswerAttemptsController', () => {
     it('should validate successfully with correct data', async () => {
       const dto = plainToInstance(CreateAnswerAttemptDto, {
         // preencha com dados válidos
-        answerId: randomUUID(),
+        answerId: createId(),
         isCorrect: true,
         timeSpentSeconds: 120,
         attemptAt: new Date(),
@@ -166,7 +165,7 @@ describe('AnswerAttemptsController', () => {
 
     it('deve lançar BadRequestException se id da rota e do DTO forem diferentes', async () => {
       await expect(
-        controller.update(randomUUID(), updateDto, adminReq),
+        controller.update(createId(), updateDto, adminReq),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -200,18 +199,6 @@ describe('AnswerAttemptsController', () => {
   // --- remove ---
 
   describe('remove', () => {
-    it('deve lançar BadRequestException se ID inválido', async () => {
-      const pipe = new ParseUUIDPipe();
-
-      // Testa o pipe isoladamente, pois ele é executado na camada HTTP, antes do controller
-      await expect(
-        pipe.transform('invalid-uuid', { type: 'param', data: '' }),
-      ).rejects.toThrow(BadRequestException);
-
-      // No teste unitário do controller, a validação do pipe não é executada
-      // Para testar o pipe integrado, faça testes e2e (integração)
-    });
-
     it('deve lançar ForbiddenException se não autenticado', async () => {
       await expect(
         controller.remove(attemptId, {} as AuthenticatedRequest),

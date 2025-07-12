@@ -3,13 +3,13 @@ import {
   IsOptional,
   IsNumber,
   IsDate,
-  IsUUID,
   Min,
   ValidateIf,
 } from 'class-validator';
+import { IsCUIDv2 } from '../../common/validators/is-cuid-validator';
 
 export class CreateAnswerAttemptDto {
-  @IsUUID('4', { message: 'O ID da resposta deve ser um UUID válido.' })
+  @IsCUIDv2({ message: 'O ID da resposta deve ser um CUIDv2 válido.' })
   answerId!: string;
 
   @IsBoolean({ message: 'O campo "isCorrect" deve ser booleano.' })

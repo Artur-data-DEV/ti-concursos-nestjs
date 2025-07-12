@@ -1,16 +1,11 @@
-import {
-  IsBoolean,
-  IsDate,
-  IsNumber,
-  IsOptional,
-  IsUUID,
-} from 'class-validator';
+import { IsBoolean, IsDate, IsNumber, IsOptional } from 'class-validator';
+import { IsCUIDv2 } from '../../common/validators/is-cuid-validator';
 
 export class UpdateAnswerAttemptDto {
-  @IsUUID('4', { message: 'O ID da tentativa deve ser um UUID válido.' })
+  @IsCUIDv2({ message: 'O ID da tentativa deve ser um CUIDv2 válido.' })
   id!: string;
 
-  @IsUUID('4')
+  @IsCUIDv2({ message: 'O ID da resposta deve ser um CUIDv2 válido.' })
   answerId!: string;
 
   @IsBoolean()

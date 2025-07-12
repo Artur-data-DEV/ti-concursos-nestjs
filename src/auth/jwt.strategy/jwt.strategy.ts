@@ -1,18 +1,28 @@
-import { ExtractJwt, Strategy } from 'passport-jwt';
-import { PassportStrategy } from '@nestjs/passport';
+// src/auth/jwt.strategy.ts
 import { Injectable } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { UserRole } from '@prisma/client';
+
+interface JwtPayload {
+  sub: string;
+  email: string;
+  role: UserRole;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'supersecret', // Usar variável de ambiente
+      secretOrKey: process.env.JWT_SECRET || 'test-secret',
     });
   }
 
-  async validate(payload: any) {
-    return { userId: payload.sub, email: payload.email, role: payload.role };
+  validate(payload: JwtPayload) {
+    return {
+      sub: payload.sub,
+      role: payload.role,
+    };
   }
 }
