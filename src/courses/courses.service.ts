@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, Course } from '@prisma/client';
+import { CreateCourseDto } from './dto/create-course.dto';
 
 interface FindAllFilters {
   title?: string;
@@ -44,19 +45,13 @@ export class CoursesService {
     });
   }
 
-  async findOne(
-    id: string,
-  ): Promise<Pick<Course, 'id' | 'instructorId'> | null> {
+  async findOne(id: string): Promise<Course | null> {
     return this.prisma.course.findUnique({
       where: { id },
-      select: {
-        id: true,
-        instructorId: true,
-      },
     });
   }
 
-  async create(data: Prisma.CourseCreateInput): Promise<Course> {
+  async create(data: CreateCourseDto): Promise<Course> {
     return this.prisma.course.create({ data });
   }
 

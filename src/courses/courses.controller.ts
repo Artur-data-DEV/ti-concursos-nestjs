@@ -11,19 +11,17 @@ import {
   Query,
   ForbiddenException,
   NotFoundException,
-  BadRequestException,
-  ParseUUIDPipe,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard/roles.guard';
 import { Roles } from '../auth/roles.decorator/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { Course, UserRole } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 import { CreateCourseDto } from './dto/create-course.dto';
-import { isUUID } from 'class-validator';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { ParseCuidPipe } from '../../src/common/pipes/parse-cuid.pipe';
 
 @Controller('courses')
 export class CoursesController {
@@ -37,7 +35,7 @@ export class CoursesController {
     @Query('instructorId') instructorId?: string,
     @Query('limit') limit?: string,
     @Query('offset') offset?: string,
-  ) {
+  ): Promise<Course[]> {
     if (!req.user) {
       throw new ForbiddenException('Não autenticado.');
     }
@@ -48,6 +46,21 @@ export class CoursesController {
       limit,
       offset,
     });
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.STUDENT, UserRole.TEACHER)
+  @Get(':id')
+  async findOne(
+    @Param('id', ParseCuidPipe) id: string,
+  ): Promise<Course | null> {
+    const course = await this.coursesService.findOne(id);
+
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    return course;
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -67,15 +80,19 @@ export class CoursesController {
     }
 
     return this.coursesService.create({
-      ...data,
-      instructor: { connect: { id: data.instructorId } },
+      title: data.title,
+      description: data.description,
+      isPublished: data.isPublished,
+      price: data.price,
+      thumbnail: data.thumbnail,
+      instructorId: data.instructorId,
     });
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   async update(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', ParseCuidPipe) id: string,
     @Body() body: UpdateCourseDto,
     @Request() req: AuthenticatedRequest,
   ) {
@@ -115,12 +132,9 @@ export class CoursesController {
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
   async remove(
-    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('id', ParseCuidPipe) id: string,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (!isUUID(id)) {
-      throw new BadRequestException('ID inválido.');
-    }
     const user = req.user;
 
     if (!user) {

@@ -118,12 +118,7 @@ describe('CoursesController', () => {
       const result = await controller.create(dto, adminReq);
 
       expect(result).toEqual(expect.objectContaining(dto));
-      expect(service.create).toHaveBeenCalledWith({
-        ...dto,
-        instructor: {
-          connect: { id: dto.instructorId },
-        },
-      });
+      expect(service.create).toHaveBeenCalledWith(dto);
     });
 
     it('deve lançar ForbiddenException se professor tentar criar curso de outro professor', async () => {
@@ -225,12 +220,6 @@ describe('CoursesController', () => {
       expect(result).toEqual({ message: 'Curso deletado com sucesso.' });
       expect(service.remove).toHaveBeenCalledWith(mockCourseId);
     });
-    it('deve lançar BadRequestException se ID do curso for inválido', async () => {
-      await expect(controller.remove('id-invalido', adminReq)).rejects.toThrow(
-        BadRequestException,
-      );
-    });
-
     it('deve lançar NotFoundException se curso não existir no delete', async () => {
       service.findOne.mockResolvedValue(null);
 

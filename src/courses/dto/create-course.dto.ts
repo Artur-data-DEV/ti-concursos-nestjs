@@ -2,11 +2,11 @@ import {
   IsString,
   IsOptional,
   IsUrl,
-  IsUUID,
   IsBoolean,
   IsNumber,
   Min,
 } from 'class-validator';
+import { IsCUIDv2 } from '../../common/validators/is-cuid-validator';
 
 export class CreateCourseDto {
   @IsString({ message: 'O título é obrigatório.' })
@@ -15,7 +15,7 @@ export class CreateCourseDto {
   @IsString({ message: 'A descrição é obrigatória.' })
   description!: string;
 
-  @IsUUID('4', { message: 'O ID do instrutor deve ser um UUID válido.' })
+  @IsCUIDv2({ message: 'O ID do instrutor do curso deve ser um CUID válido.' })
   instructorId!: string;
 
   @IsOptional()

@@ -4,6 +4,7 @@ import { CoursesService } from './courses.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { Course } from '@prisma/client';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { createId } from '@paralleldrive/cuid2';
 
 describe('CoursesService', () => {
   let service: CoursesService;
@@ -101,7 +102,6 @@ describe('CoursesService', () => {
 
       expect(prismaService.course.findUnique).toHaveBeenCalledWith({
         where: { id: '1' },
-        select: { id: true, instructorId: true },
       });
 
       expect(result).toEqual(mockCourse);
@@ -120,14 +120,14 @@ describe('CoursesService', () => {
     const inputData = {
       title: 'Course',
       description: 'Desc',
-      instructor: { connect: { id: 'abc' } },
+      instructorId: createId(),
     };
 
     const createdCourse: Course = {
       id: '1',
       title: 'Course',
       description: 'Desc',
-      instructorId: 'abc',
+      instructorId: inputData.instructorId,
       thumbnail: null,
       price: null,
       isPublished: false,
