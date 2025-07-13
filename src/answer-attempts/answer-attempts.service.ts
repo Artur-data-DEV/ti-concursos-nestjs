@@ -23,8 +23,8 @@ export class AnswerAttemptsService {
       where,
       include: { answer: true },
       orderBy: { attemptAt: 'desc' },
-      ...(filters.limit ? { take: Number(filters.limit) } : {}),
-      ...(filters.offset ? { skip: Number(filters.offset) } : {}),
+      ...(filters.limit !== undefined ? { take: Number(filters.limit) } : {}),
+      ...(filters.offset !== undefined ? { skip: Number(filters.offset) } : {}),
     });
   }
 
@@ -59,8 +59,8 @@ export class AnswerAttemptsService {
       where: { id },
       data: {
         isCorrect: data.isCorrect,
-        timeSpent: data.timeSpent ?? null,
-        attemptAt: data.attemptAt || new Date(),
+        timeSpent: data.timeSpent,
+        attemptAt: data.attemptAt,
       },
       include: { answer: true },
     });

@@ -6,9 +6,9 @@ import {
   IsUrl,
   IsInt,
   Min,
-  IsUUID,
 } from 'class-validator';
 import { LessonType } from '@prisma/client';
+import { IsCUIDv2 } from '../../../src/common/validators/is-cuid-validator';
 
 export class CreateLessonDto {
   @IsString()
@@ -35,7 +35,7 @@ export class CreateLessonDto {
   })
   duration?: number;
 
-  @IsUUID()
+  @IsCUIDv2()
   moduleId!: string;
 
   @IsInt()

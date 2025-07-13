@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { LessonsFilterDto } from './dto/lessons-filter-dto';
-import { ValidateUuidDto } from './dto/validate-uuid.dto';
+import { ValidateCuidDto } from './dto/validate-uuid.dto';
 
 @Injectable()
 export class LessonsService {
@@ -44,7 +44,7 @@ export class LessonsService {
     return this.prisma.lesson.delete({ where: { id } });
   }
 
-  async isTeacherOwnerOfModule(dto: ValidateUuidDto): Promise<boolean> {
+  async isTeacherOwnerOfModule(dto: ValidateCuidDto): Promise<boolean> {
     const { moduleId, teacherId } = dto;
 
     const foundModule = await this.prisma.module.findUnique({
@@ -84,10 +84,30 @@ export class LessonsService {
       where: { userId: studentId, courseId, status: 'ACTIVE' },
     });
 
-    if (!enrollment) return [];
+    if (!enrollment) {
+      throw new ForbiddenException(
+        'Você não está matriculado neste curso ou seu acesso não está ativo.',
+      );
+    }
 
     return this.prisma.lesson.findMany({
       where: { module: { courseId } },
+      orderBy: { order: 'asc' },
+    });
+  }
+
+  async findLessonsByTeacherId(professorId: string, filters: LessonsFilterDto) {
+    const { take, skip } = filters;
+    return this.prisma.lesson.findMany({
+      where: {
+        module: {
+          course: {
+            instructorId: professorId,
+          },
+        },
+      },
+      skip,
+      take,
       orderBy: { order: 'asc' },
     });
   }

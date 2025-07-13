@@ -1,9 +1,9 @@
-import { IsUUID } from 'class-validator';
+import { IsCUIDv2 } from '../../../src/common/validators/is-cuid-validator';
 
-export class ValidateUuidDto {
-  @IsUUID()
+export class ValidateCuidDto {
+  @IsCUIDv2()
   teacherId!: string;
 
-  @IsUUID()
+  @IsCUIDv2()
   moduleId!: string;
 }

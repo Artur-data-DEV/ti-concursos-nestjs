@@ -2,10 +2,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnswersService } from './answers.service';
-import { randomUUID } from 'crypto';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { Answer } from '@prisma/client';
 import { CreateAnswerDto } from './dto/create-answer.dto';
+import { createId } from '@paralleldrive/cuid2';
 
 describe('AnswersService', () => {
   let service: AnswersService;
@@ -33,12 +33,12 @@ describe('AnswersService', () => {
   describe('create', () => {
     it('should create answer', async () => {
       const data: CreateAnswerDto = {
-        userId: randomUUID(),
-        questionId: randomUUID(),
+        userId: createId(),
+        questionId: createId(),
         selectedOption: 'A',
       };
 
-      const createdAnswer = { id: randomUUID(), ...data } as Answer;
+      const createdAnswer = { id: createId(), ...data } as Answer;
       prismaService.answer.create.mockResolvedValue(createdAnswer);
 
       const result = await service.create(data);
@@ -65,7 +65,11 @@ describe('AnswersService', () => {
   describe('findOne', () => {
     it('should return answer by id', async () => {
       const id = 'answer-id';
-      const answer = { id, userId: 'uuid', questionId: 'uuid' } as Answer;
+      const answer = {
+        id,
+        userId: createId(),
+        questionId: createId(),
+      } as Answer;
       prismaService.answer.findUnique.mockResolvedValue(answer);
 
       const result = await service.findOne(id);

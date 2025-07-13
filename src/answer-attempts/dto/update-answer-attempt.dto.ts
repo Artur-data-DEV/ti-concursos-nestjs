@@ -1,21 +1,18 @@
 import { IsBoolean, IsDate, IsNumber, IsOptional } from 'class-validator';
-import { IsCUIDv2 } from '../../common/validators/is-cuid-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateAnswerAttemptDto {
-  @IsCUIDv2({ message: 'O ID da tentativa deve ser um CUIDv2 válido.' })
-  id!: string;
-
-  @IsCUIDv2({ message: 'O ID da resposta deve ser um CUIDv2 válido.' })
-  answerId!: string;
-
+  @IsOptional()
   @IsBoolean()
-  isCorrect!: boolean;
+  isCorrect?: boolean;
 
   @IsOptional()
   @IsNumber()
+  @Type(() => Number)
   timeSpent?: number | null;
 
   @IsOptional()
   @IsDate()
+  @Type(() => Date)
   attemptAt?: Date;
 }

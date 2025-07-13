@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { LessonType, Prisma } from '@prisma/client';
+import { ForbiddenException } from '@nestjs/common';
 
 type ModuleWithCourse = Prisma.ModuleGetPayload<{
   include: {
@@ -49,7 +50,7 @@ describe('LessonsService', () => {
       };
 
       const createdLesson = {
-        id: 'lesson-uuid',
+        id: 'lessoncuid',
         title: dto.title,
         content: dto.content,
         lessonType: dto.lessonType,
@@ -126,7 +127,7 @@ describe('LessonsService', () => {
   describe('findOne', () => {
     it('should find one lesson by id', async () => {
       const lesson = {
-        id: 'lesson-uuid',
+        id: 'lessoncuid',
         title: 'Lesson Title',
         content: 'Lesson Content',
         lessonType: LessonType.EXERCISE,
@@ -140,10 +141,10 @@ describe('LessonsService', () => {
 
       prisma.lesson.findUnique.mockResolvedValue(lesson);
 
-      const result = await service.findOne('lesson-uuid');
+      const result = await service.findOne('lessoncuid');
 
       expect(prisma.lesson.findUnique).toHaveBeenCalledWith({
-        where: { id: 'lesson-uuid' },
+        where: { id: 'lessoncuid' },
       });
       expect(result).toEqual(lesson);
     });
@@ -154,7 +155,7 @@ describe('LessonsService', () => {
       const updateDto = { title: 'Updated Title' };
 
       const updatedLesson = {
-        id: 'lesson-uuid',
+        id: 'lessoncuid',
         title: updateDto.title,
         content: 'Old Content',
         lessonType: LessonType.QUIZ,
@@ -168,10 +169,10 @@ describe('LessonsService', () => {
 
       prisma.lesson.update.mockResolvedValue(updatedLesson);
 
-      const result = await service.update('lesson-uuid', updateDto);
+      const result = await service.update('lessoncuid', updateDto);
 
       expect(prisma.lesson.update).toHaveBeenCalledWith({
-        where: { id: 'lesson-uuid' },
+        where: { id: 'lessoncuid' },
         data: updateDto,
       });
       expect(result).toEqual(updatedLesson);
@@ -181,7 +182,7 @@ describe('LessonsService', () => {
   describe('remove', () => {
     it('should delete a lesson', async () => {
       const deletedLesson = {
-        id: 'lesson-uuid',
+        id: 'lessoncuid',
         title: 'Lesson Title',
         content: 'Content',
         lessonType: LessonType.EXERCISE,
@@ -195,10 +196,10 @@ describe('LessonsService', () => {
 
       prisma.lesson.delete.mockResolvedValue(deletedLesson);
 
-      const result = await service.remove('lesson-uuid');
+      const result = await service.remove('lessoncuid');
 
       expect(prisma.lesson.delete).toHaveBeenCalledWith({
-        where: { id: 'lesson-uuid' },
+        where: { id: 'lessoncuid' },
       });
       expect(result).toEqual(deletedLesson);
     });
@@ -397,15 +398,12 @@ describe('LessonsService', () => {
       expect(result).toEqual(lessons);
     });
 
-    it('should return empty array if no enrollment', async () => {
+    it('should throw ForbiddenException if no enrollment is found', async () => {
       prisma.enrollment.findFirst.mockResolvedValue(null);
 
-      const result = await service.findAvailableLessonsForStudent(
-        'student-id',
-        'course-id',
-      );
-
-      expect(result).toEqual([]);
+      await expect(
+        service.findAvailableLessonsForStudent('student-id', 'course-id'),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

@@ -8,14 +8,13 @@ import {
   Delete,
   UseGuards,
   Request,
-  BadRequestException,
   ForbiddenException,
   NotFoundException,
   Query,
 } from '@nestjs/common';
 import { AnswerAttemptsService } from './answer-attempts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
-import { Prisma } from '@prisma/client';
+import { UserRole } from '@prisma/client';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 import { CreateAnswerAttemptDto } from './dto/create-answer-attempt.dto';
 import { UpdateAnswerAttemptDto } from './dto/update-answer-attempt.dto';
@@ -23,6 +22,7 @@ import { FindAttemptFilterDto } from './dto/answer-attempts-filters.dto';
 import { ParseCuidPipe } from '../common/pipes/parse-cuid.pipe';
 import { Roles } from '../../src/auth/roles.decorator/roles.decorator';
 import { RolesGuard } from '../../src/auth/roles.guard/roles.guard';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 @Controller('answer-attempts')
 export class AnswerAttemptsController {
@@ -30,7 +30,7 @@ export class AnswerAttemptsController {
 
   /*** GET - LISTAR TENTATIVAS ***/
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN', 'STUDENT', 'TEACHER')
+  @Roles(UserRole.ADMIN, UserRole.STUDENT, UserRole.TEACHER)
   @Get()
   async findAll(
     @Request() req: AuthenticatedRequest,
@@ -77,7 +77,7 @@ export class AnswerAttemptsController {
 
   /*** PATCH - ATUALIZAR TENTATIVA ***/
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('ADMIN', 'STUDENT')
+  @Roles(UserRole.ADMIN, UserRole.STUDENT)
   @Patch(':id')
   async update(
     @Param('id', ParseCuidPipe) id: string,
@@ -89,13 +89,6 @@ export class AnswerAttemptsController {
     if (!user) {
       throw new ForbiddenException('Não autenticado.');
     }
-
-    if (id !== updateDto.id) {
-      throw new BadRequestException(
-        'ID do parâmetro não bate com o corpo da requisição.',
-      );
-    }
-
     const attempt = await this.answerAttemptsService.findOne(id);
     if (!attempt) {
       throw new NotFoundException('Tentativa de resposta não encontrada.');
@@ -115,7 +108,7 @@ export class AnswerAttemptsController {
       return await this.answerAttemptsService.update(id, updateDto);
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error instanceof PrismaClientKnownRequestError &&
         error.code === 'P2025'
       ) {
         throw new NotFoundException(
@@ -151,7 +144,7 @@ export class AnswerAttemptsController {
       return { message: 'Tentativa de resposta deletada com sucesso.' };
     } catch (error) {
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error instanceof PrismaClientKnownRequestError &&
         error.code === 'P2025'
       ) {
         throw new NotFoundException('Tentativa não encontrada para exclusão.');

@@ -4,19 +4,19 @@ import { AnswerAttemptsService } from './answer-attempts.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
-import { randomUUID } from 'crypto';
 import {
   AttemptFilterDto,
   FindAttemptFilterDto,
 } from './dto/answer-attempts-filters.dto';
+import { createId } from '@paralleldrive/cuid2';
 
 describe('AnswerAttemptsService', () => {
   let service: AnswerAttemptsService;
   let prisma: DeepMockProxy<PrismaService>;
 
-  const attemptId = randomUUID();
-  const answerId = randomUUID();
-  const userId = randomUUID();
+  const attemptId = createId();
+  const answerId = createId();
+  const userId = createId();
 
   const mockAttempt = {
     id: attemptId,
@@ -62,7 +62,6 @@ describe('AnswerAttemptsService', () => {
       };
 
       const result = await service.findAll(filters);
-
       expect(prisma.answerAttempt.findMany).toHaveBeenCalledWith({
         where: {
           answer: {
@@ -162,7 +161,7 @@ describe('AnswerAttemptsService', () => {
       };
 
       const createdAttempt = {
-        id: randomUUID(),
+        id: createId(),
         answerId: dto.answerId,
         isCorrect: dto.isCorrect,
         timeSpent: dto.timeSpent,
@@ -180,6 +179,7 @@ describe('AnswerAttemptsService', () => {
           timeSpent: dto.timeSpent,
           attemptAt: expect.any(Date) as Date,
         },
+        include: { answer: true },
       });
 
       expect(result).toEqual(createdAttempt);
@@ -192,11 +192,11 @@ describe('AnswerAttemptsService', () => {
       };
 
       const createdAttempt = {
-        id: randomUUID(),
+        id: createId(),
         answerId: dto.answerId,
         isCorrect: dto.isCorrect,
         timeSpent: null,
-        attemptAt: expect.any(Date) as Date,
+        attemptAt: new Date(),
       };
 
       prisma.answerAttempt.create.mockResolvedValue(createdAttempt);
@@ -210,6 +210,7 @@ describe('AnswerAttemptsService', () => {
           timeSpent: null,
           attemptAt: expect.any(Date) as Date,
         },
+        include: { answer: true },
       });
 
       expect(result).toEqual(createdAttempt);
@@ -230,6 +231,7 @@ describe('AnswerAttemptsService', () => {
       expect(prisma.answerAttempt.update).toHaveBeenCalledWith({
         where: { id: attemptId },
         data: updateDto,
+        include: { answer: true },
       });
 
       expect(result).toEqual({
@@ -247,7 +249,11 @@ describe('AnswerAttemptsService', () => {
       );
 
       await expect(
-        service.update('invalid-id', { isCorrect: true }),
+        service.update('invalid-id', {
+          isCorrect: false,
+          timeSpent: 30,
+          attemptAt: new Date(),
+        }),
       ).rejects.toThrow();
     });
   });

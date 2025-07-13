@@ -10,12 +10,16 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard/jwt-auth.guard';
 import { AnswersService } from './answers.service';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 import { CreateAnswerDto } from './dto/create-answer.dto';
+import { Roles } from '../auth/roles.decorator/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard/roles.guard';
+import { UserRole } from '@prisma/client';
 
 @Controller('answers')
 export class AnswersController {
   constructor(private readonly answersService: AnswersService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.TEACHER)
   @Post()
   async create(
     @Body() body: CreateAnswerDto,

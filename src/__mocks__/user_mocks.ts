@@ -1,11 +1,11 @@
-import { randomUUID } from 'crypto';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 import { UserRole } from '@prisma/client'; // Certifique-se de que você está importando a enum correta
+import { createId } from '@paralleldrive/cuid2';
 
 function createMockRequest(role: UserRole): AuthenticatedRequest {
   return {
     user: {
-      sub: randomUUID(),
+      sub: createId(),
       role,
     },
   } as AuthenticatedRequest;

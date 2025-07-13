@@ -7,7 +7,6 @@ import {
 } from '../__mocks__/user_mocks';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
-  BadRequestException,
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
@@ -156,18 +155,10 @@ describe('AnswerAttemptsController', () => {
 
   describe('update', () => {
     const updateDto: UpdateAnswerAttemptDto = {
-      id: attemptId,
-      answerId,
       isCorrect: true,
       timeSpent: 80,
       attemptAt: new Date(),
     };
-
-    it('deve lançar BadRequestException se id da rota e do DTO forem diferentes', async () => {
-      await expect(
-        controller.update(createId(), updateDto, adminReq),
-      ).rejects.toThrow(BadRequestException);
-    });
 
     it('deve lançar ForbiddenException se não autenticado', async () => {
       await expect(

@@ -3,7 +3,6 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { User } from '@prisma/client';
-
 @Injectable()
 export class AuthService {
   constructor(
@@ -21,15 +20,14 @@ export class AuthService {
       user.secure &&
       (await bcrypt.compare(pass, user.secure.password))
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { secure, ...result } = user;
+      const { ...result } = user;
       return result;
     }
     return null;
   }
 
-  login(user: User) {
-    const payload = { email: user.email, sub: user.id, role: user.role };
+  login(user: Pick<User, 'id' | 'email' | 'role'>) {
+    const payload = { sub: user.id, email: user.email, role: user.role };
     return {
       access_token: this.jwtService.sign(payload),
     };

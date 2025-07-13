@@ -5,6 +5,7 @@ import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import { User, UserRole } from '@prisma/client';
 
 jest.mock('bcryptjs');
 
@@ -48,9 +49,14 @@ describe('AuthService', () => {
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
-        secure: { password: 'hashedPassword' },
-      };
-      usersService.findOneByEmail.mockResolvedValue(user as any);
+        secure: {
+          password: 'hashedPassword',
+          userId: '1', // Adicione isso aqui
+        },
+        // demais propriedades do usuário que sua função espera...
+      } as unknown as User & { secure: { password: string; userId: string } };
+
+      usersService.findOneByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
       const result = await service.validateUser('test@example.com', 'password');
@@ -59,6 +65,14 @@ describe('AuthService', () => {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        emailVerified: user.emailVerified,
+        image: user.image,
+        bio: user.bio,
+        socialLinks: user.socialLinks,
+        secure: user.secure,
       });
     });
 
@@ -67,13 +81,17 @@ describe('AuthService', () => {
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
-        secure: { password: 'hashedPassword' },
-      };
-      usersService.findOneByEmail.mockResolvedValue(user as any);
+        secure: {
+          password: 'hashedPassword',
+          userId: '1', // Adicione isso aqui
+        },
+        // demais propriedades do usuário que sua função espera...
+      } as unknown as User & { secure: { password: string; userId: string } };
+
+      usersService.findOneByEmail.mockResolvedValue(user);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       const result = await service.validateUser('test@example.com', 'password');
-
       expect(result).toBeNull();
     });
 
@@ -81,22 +99,21 @@ describe('AuthService', () => {
       usersService.findOneByEmail.mockResolvedValue(null);
 
       const result = await service.validateUser('test@example.com', 'password');
-
       expect(result).toBeNull();
     });
   });
 
   describe('login', () => {
     it('should return access_token with correct payload', () => {
-      const user = {
+      const user: Pick<User, 'id' | 'email' | 'role'> = {
         id: '1',
         email: 'test@example.com',
-        name: 'Test User',
-        role: 'STUDENT',
+        role: UserRole.STUDENT,
       };
+
       jwtService.sign.mockReturnValue('mockAccessToken');
 
-      const result = service.login(user as any);
+      const result = service.login(user);
 
       expect(result).toEqual({ access_token: 'mockAccessToken' });
       expect(jwtService.sign).toHaveBeenCalledWith({

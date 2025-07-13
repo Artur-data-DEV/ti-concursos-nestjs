@@ -3,7 +3,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { LessonsController } from './lessons.controller';
 import { LessonsService } from './lessons.service';
 import { ModulesService } from '../modules/modules.service';
-import { randomUUID } from 'crypto';
 import {
   BadRequestException,
   ForbiddenException,
@@ -18,15 +17,16 @@ import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-reques
 import { plainToInstance } from 'class-transformer';
 import { isUUID, validate } from 'class-validator';
 import { UpdateEnrollmentDto } from '../enrollments/dto/update-enrollment.dto';
+import { createId } from '@paralleldrive/cuid2';
 
 describe('LessonsController', () => {
   let controller: LessonsController;
   let service: DeepMockProxy<LessonsService>;
   let moduleService: DeepMockProxy<ModulesService>;
 
-  const mockLessonId = randomUUID();
-  const mockModuleId = randomUUID();
-  const mockCourseId = randomUUID();
+  const mockLessonId = createId();
+  const mockModuleId = createId();
+  const mockCourseId = createId();
 
   const mockLesson: Lesson = {
     id: mockLessonId,
@@ -202,7 +202,7 @@ describe('LessonsController', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         description: 'Mock description',
-        courseId: randomUUID(),
+        courseId: createId(),
       });
       service.create.mockResolvedValue(mockLesson);
       const result = await controller.create(dto, adminReq);

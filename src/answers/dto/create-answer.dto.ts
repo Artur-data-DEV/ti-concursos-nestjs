@@ -1,6 +1,5 @@
 import {
   IsString,
-  IsUUID,
   IsOptional,
   IsBoolean,
   IsInt,
@@ -8,22 +7,30 @@ import {
   ValidateIf,
   IsNotEmpty,
 } from 'class-validator';
+import { IsCUIDv2 } from '../../../src/common/validators/is-cuid-validator';
+import { Answer } from '@prisma/client';
 
 export class CreateAnswerDto {
-  @IsUUID('4', { message: 'O ID do usuário deve ser um UUID válido.' })
+  @IsCUIDv2({ message: 'O ID do usuário deve ser um CUID válido.' })
   userId!: string;
 
-  @IsUUID('4', { message: 'O ID da pergunta deve ser um UUID válido.' })
+  @IsCUIDv2({ message: 'O ID da pergunta deve ser um CUID válido.' })
   questionId!: string;
 
   @IsOptional()
   @IsString({ message: 'A opção selecionada deve ser uma string.' })
-  @IsNotEmpty({ message: 'A opção selecionada não pode ser uma string vazia.' })
+  @ValidateIf(
+    (o: Answer) => o.selectedOption !== null && o.selectedOption !== undefined,
+  )
+  @IsNotEmpty({ message: 'A opção selecionada não pode ser vazia.' })
   selectedOption?: string;
 
   @IsOptional()
   @IsString({ message: 'A resposta em texto deve ser uma string.' })
-  @ValidateIf((o: CreateAnswerDto) => o.textAnswer !== null)
+  @ValidateIf(
+    (o: Answer) => o.textAnswer !== null && o.textAnswer !== undefined,
+  )
+  @IsNotEmpty({ message: 'A resposta em texto não pode ser vazia.' })
   textAnswer?: string | null;
 
   @IsOptional()

@@ -2,7 +2,6 @@
 import { adminReq, studentReq } from '../__mocks__/user_mocks';
 import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { AuthenticatedRequest } from 'src/common/interfaces/authenticated-request.interface';
 import { AnswersService } from './answers.service';
 import { AnswersController } from './answers.controller';
@@ -10,14 +9,15 @@ import { DeepMockProxy, mockDeep } from 'jest-mock-extended';
 import { CreateAnswerDto } from './dto/create-answer.dto';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
+import { createId } from '@paralleldrive/cuid2';
 
 describe('AnswersController', () => {
   let controller: AnswersController;
   let service: DeepMockProxy<AnswersService>;
 
-  const mockAnswerId = randomUUID();
-  const mockQuestionId = randomUUID();
-  const mockUserId = randomUUID();
+  const mockAnswerId = createId();
+  const mockQuestionId = createId();
+  const mockUserId = createId();
 
   const mockAnswer = {
     id: mockAnswerId,
@@ -59,7 +59,7 @@ describe('AnswersController', () => {
     it('deve lançar BadRequestException se DTO for inválido', async () => {
       const invalidDto = {
         ...newAnswerDto,
-        userId: 'not-a-uuid', // inválido
+        userId: 'not-a-cuid', // inválido
       };
 
       const dtoInstance = plainToInstance(CreateAnswerDto, invalidDto);
@@ -84,7 +84,7 @@ describe('AnswersController', () => {
     it('deve lançar ForbiddenException se STUDENT tentar responder por outro usuário', async () => {
       await expect(
         controller.create(newAnswerDto, {
-          user: { sub: randomUUID(), role: 'STUDENT' },
+          user: { sub: createId(), role: 'STUDENT' },
         } as AuthenticatedRequest),
       ).rejects.toThrow(ForbiddenException);
     });
